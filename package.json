@@ -5,8 +5,10 @@
   "main": "/dist/index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "build": "tsc",
-    "serve": "node dist/index.js"
+    "clean": "tsc --build --clean",
+    "build": "npm run clean && tsc --build",
+    "serve": "node dist/index.js",
+    "restart": "npm run build && pm2 restart api"
   },
   "author": "il_kol",
   "license": "ISC",
