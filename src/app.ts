@@ -1,6 +1,16 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import userRoutes from './routes/user';
+import { DB } from './DB';
+
+
+const db = new DB({
+    charset  : 'utf8mb4_unicode_ci',
+    host     : 'localhost',
+    user     : 'api',
+    password : 'l1Bs6j5MOBHhYMA1',
+    database : 'bot'
+});
 
 const app = express();
 const port = 3000;
