@@ -1,9 +1,10 @@
-import express, { Request, Response, Application } from 'express';
+import express, { Request, Response, Application, NextFunction } from 'express';
 import cors from 'cors';
 
 import { DB } from "./DB";
 import userRoutes from './routes/user';
 import { PoolOptions } from 'mysql2';
+import { AuthMiddleware } from './middleware/authtorization';
 
 export class App
 {
@@ -33,6 +34,7 @@ export class App
             allowedHeaders: ['Content-Type', 'Authorization'],
             credentials: true
         }));
+		this.app.use(AuthMiddleware);
     }
 
     private routes(): void {
