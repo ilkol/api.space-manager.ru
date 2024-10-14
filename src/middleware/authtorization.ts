@@ -16,5 +16,5 @@ export const AuthMiddleware = (req: Request, res: Response, next: NextFunction) 
 
 function checkApiKey(apiKey: string): boolean
 {
-	return apiKey === "a65860fff959423f30b5131d5d4c58a7";
+	return apiKey === process.env.SECRET_API_KEY;
 }
