@@ -1,32 +1,29 @@
-import mysql from 'mysql';
+import mysql from 'mysql2/promise'; // Используем promise API
 
-export class DB
-{
+export class DB {
     private connection: mysql.Pool;
 
-    constructor(connectData: mysql.PoolConfig)
-    {
-        this.connection = mysql.createPool(connectData)
+    constructor(connectData: mysql.PoolOptions) {
+        this.connection = mysql.createPool(connectData);
 
-        this.connection.getConnection(function(err: any) {
-            if (err) {
-            console.error('[Logs:Mysql] Ошибка при подключении к базе данных.');
-            return true;
-            }
-            else console.log('[Logs:Mysql] Успешное подключение к базе данных.');
-        });
-
+        // Проверка подключения
+        this.connection.getConnection()
+            .then(() => {
+                console.log('[Logs:Mysql] Успешное подключение к базе данных.');
+            })
+            .catch((err: any) => {
+                console.error('[Logs:Mysql] Ошибка при подключении к базе данных:', err.message);
+            });
     }
 
-    public query(query: string)
-    {
-        this.connection.query(query, (error, results) => {
-            if (error) {
-              console.error('Ошибка выполнения запроса:', error.stack);
-              return;
-            }
-            console.log('Результаты запроса:', results);
-        });
+    // Асинхронный запрос к базе данных с использованием промисов
+    public async query(query: string, params?: any[]): Promise<mysql.QueryResult|null> {
+        try {
+            const [results] = await this.connection.query(query, params);
+            return results;
+        } catch (error) {
+            console.error('Ошибка выполнения запроса:', error);
+            return null;
+        }
     }
-
 }
