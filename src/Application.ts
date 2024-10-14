@@ -2,8 +2,8 @@ import express, { Request, Response, Application } from 'express';
 import cors from 'cors';
 
 import { DB } from "./DB";
-import { PoolConfig } from 'mysql';
 import userRoutes from './routes/user';
+import { PoolOptions } from 'mysql2';
 
 export class App
 {
@@ -11,7 +11,7 @@ export class App
     private readonly port: number = 3000;
     private db: DB;
 
-    constructor(dbConfig: PoolConfig)
+    constructor(dbConfig: PoolOptions)
     {
         this.app = express();
         this.db = this.createDBConnection(dbConfig);
@@ -21,7 +21,7 @@ export class App
         this.errorHandling();
     }
 
-    private createDBConnection(dbConfig: PoolConfig): DB
+    private createDBConnection(dbConfig: PoolOptions): DB
     {
         return new DB(dbConfig);
     }
