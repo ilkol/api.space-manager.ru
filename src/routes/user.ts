@@ -20,7 +20,7 @@ export default (db: DB) => {
     
     const routes: Route[] = [
         route('/:id/getActiveChatsList', controller.getActiveChatsList.bind(controller)),
-        route('/:id', controller.getUserById.bind(controller)),
+        route('/:id/getTodayActivityStatistics', controller.getTodayActivityStatistics.bind(controller)),
     ];
 
     routes.forEach((route) => {

@@ -41,4 +41,25 @@ export class UserController extends AbstractController
         const results = await this.db.query(query, [userId]);
         res.json(results);
     }
+
+	async getTodayActivityStatistics(req: Request, res: Response)
+	{
+		const userId = req.params.id;
+		
+		const query = `
+			SELECT 
+				COUNT(*) AS messages
+			FROM users_statistics
+			WHERE user_id = ?
+			AND DATE(FROM_UNIXTIME(time)) = CURDATE();
+		`;
+		const [results]: any = await this.db.query(query, [userId]);
+
+		// Если результат существует и не пустой, отправляем первый элемент массива
+		if (results) {
+			res.json(results);
+		} else {
+			res.json({ messages: 0 });
+		}
+	}
 }
