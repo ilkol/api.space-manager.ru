@@ -23,10 +23,19 @@ export class UserController extends AbstractController
         const userId = req.params.id;
         
         const query = `
-            SELECT u.chat_id AS id, c.title AS title 
-            FROM users u 
-            LEFT JOIN chats c USING(chat_id) 
-            WHERE user_id = ? AND in_chat = 1
+            SELECT u.chat_id id, 
+				c.title title, 
+				count_table.count count
+			FROM users u
+			LEFT JOIN chats c USING(chat_id)
+			LEFT JOIN (
+				SELECT u.chat_id, COUNT(*) AS count
+				FROM users u
+				WHERE u.in_chat = 1
+				GROUP BY u.chat_id
+			) count_table USING(chat_id)
+			WHERE u.user_id = ?
+			AND u.in_chat = 1
         `;
 
         const results = await this.db.query(query, [userId]);
