@@ -25,6 +25,7 @@ export class UserController extends AbstractController
         const query = `
             SELECT u.chat_id id, 
 				c.title title, 
+				c.photo_link avatar,
 				count_table.count count
 			FROM users u
 			LEFT JOIN chats c USING(chat_id)
