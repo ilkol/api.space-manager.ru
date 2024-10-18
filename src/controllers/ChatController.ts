@@ -11,6 +11,7 @@ interface UserInfo
 	role: number;
 	avatar?: string;
 	name: string;
+	roleName: string|null;
 }
 
 function user(data: any): UserInfo
@@ -18,7 +19,8 @@ function user(data: any): UserInfo
 	return {
 		id: data.user_id,
 		role: data.role,
-		name: ""
+		name: "",
+		roleName: data.roleName
 	};
 }
 
@@ -109,23 +111,22 @@ export class ChatController extends AbstractController
 			return;
         }
 
-        const { id, type } = validationResult.value;
+        let { id, type } = validationResult.value;
 		
 		
-		let query: string;
+		let query: string = `
+			SELECT 
+				u.*,
+				r.name roleName
+			FROM users u
+			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
+			WHERE u.chat_id =
+		`;
 		if(type === "peer_id") {
-			query = `
-				SELECT 
-					* 
-				FROM users 
-				WHERE chat_id = ?
-			`;
+			query += "?";
 		} else {
-			query = `
-				SELECT 
-					* 
-				FROM users 
-				WHERE chat_id = (
+			query += `
+				(
 					SELECT
 						chat_id
 					FROM chats
@@ -143,17 +144,26 @@ export class ChatController extends AbstractController
 		}
 		
 		const usersArray: UserInfo[] = results.map(user);
-
+		id = results[0].chat_id;
+		
 		const messageUrl = `https://api.vk.com/method/messages.getConversationMembers?peer_id=${id}&fields=photo_50&access_token=${App.vkToken}&v=5.199`;
 
 		try {
 			let response = await axios.get(messageUrl) 
+			if(response.data.error) {
+				const error = response.data.error;
+				res.json( {
+					error: error.error_code,
+					message: error.error_msg
+				});
+				return;	
+			}
 			let reponse = response.data.response;
 			reponse.profiles.forEach((el: any) => {
 				const user = usersArray.find(u => u.id === el.id);
 				if (user) {
 					user.avatar = el.photo_50;
-					user.name = el.first_name + el.last_name;
+					user.name = `${el.first_name} ${el.last_name}`;
 				}
 			});
 			reponse.groups.forEach((el: any) => {
@@ -168,6 +178,20 @@ export class ChatController extends AbstractController
 			res.json({error: 1});
 			return;
 		}
+
+		const roles: Map<number, string> = new Map([
+			[0, "Участник"],
+			[20, "Модератор"],
+			[40, "Ст. Модератор"],
+			[60, "Администратор"],
+			[80, "Ст. Администратор"],
+			[100, "Создатель"]
+		]);
+		usersArray.map(user => {
+			if(user.roleName === null) {
+				user.roleName = roles.get(user.role) ?? "Ошибка";
+			} 
+		});
 		
 		res.json(usersArray);
     }
