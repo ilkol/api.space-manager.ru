@@ -7,16 +7,18 @@ import axios from 'axios';
 
 interface UserInfo
 {
-	user_id: number;
+	id: number;
 	role: number;
 	avatar?: string;
+	name: string;
 }
 
 function user(data: any): UserInfo
 {
 	return {
-		user_id: data.user_id,
-		role: data.role
+		id: data.user_id,
+		role: data.role,
+		name: ""
 	};
 }
 
@@ -148,15 +150,17 @@ export class ChatController extends AbstractController
 			let response = await axios.get(messageUrl) 
 			let reponse = response.data.response;
 			reponse.profiles.forEach((el: any) => {
-				const user = usersArray.find(u => u.user_id === el.id);
+				const user = usersArray.find(u => u.id === el.id);
 				if (user) {
 					user.avatar = el.photo_50;
+					user.name = el.first_name + el.last_name;
 				}
 			});
 			reponse.groups.forEach((el: any) => {
-				const user = usersArray.find(u => u.user_id === -el.id);
+				const user = usersArray.find(u => u.id === -el.id);
 				if (user) {
 					user.avatar = el.photo_50;
+					user.name = el.name;
 				}
 			});
 			
