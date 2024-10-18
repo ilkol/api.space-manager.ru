@@ -13,9 +13,16 @@ export class App
     private app: Application;
     private readonly port: number = 3000;
     private db: DB;
+	private static _vkToken: string = "";
+
+	static get vkToken(): string
+	{
+		return App._vkToken;
+	}
 
     constructor(dbConfig: PoolOptions)
     {
+		App._vkToken = process.env.VK_TOKEN ?? "";
         this.app = express();
         this.db = this.createDBConnection(dbConfig);
 
