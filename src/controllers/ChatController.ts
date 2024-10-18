@@ -58,8 +58,12 @@ export class ChatController extends AbstractController
 
 		const queryParams = [id];
 
-        const results = await this.db.query(query, queryParams);
-        
-        res.json(results);
+        const [results]: any = await this.db.query(query, queryParams);
+
+		if (results) {
+			res.json(results);
+		} else {
+			res.json({ error: "Данные чата не найдены" });
+		}
     }
 }
