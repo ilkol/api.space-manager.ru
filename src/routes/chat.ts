@@ -22,6 +22,7 @@ export default (db: DB) => {
     const routes: Route[] = [
         route('/:id/getInfo', controller.getInfo.bind(controller)),
 		route('/:id/getMembers', controller.getMembers.bind(controller)),
+		route('/:id/getBannedUsers', controller.getBannedUsers.bind(controller)),
     ];
 
     routes.forEach((route) => {

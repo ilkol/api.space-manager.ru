@@ -5,15 +5,20 @@ import Joi from 'joi';
 import { App } from '../Application';
 import axios from 'axios';
 
-interface UserInfo
+interface defaultUserInfo
 {
 	id: number;
-	role: number;
 	avatar?: string;
 	name: string;
+}
+
+interface UserInfo extends defaultUserInfo
+{
+	role: number;
 	roleName: string|null;
 	nick: string|null;
 }
+
 
 function user(data: any): UserInfo
 {
@@ -23,6 +28,25 @@ function user(data: any): UserInfo
 		name: "",
 		roleName: data.roleName,
 		nick: data.nick
+	};
+}
+
+interface BanInfo extends defaultUserInfo
+{
+	admin: number;
+	unban: number;
+	bantime: number;
+	reason: string|null;
+}
+function bannedUser(data: any): BanInfo
+{
+	return {
+		id: data.user_id,
+		name: "",
+		admin: data.admin_id,
+		unban: data.unban_time,
+		bantime: data.ban_time,
+		reason: data.reason
 	};
 }
 
@@ -150,36 +174,9 @@ export class ChatController extends AbstractController
 		const usersArray: UserInfo[] = results.map(user);
 		id = results[0].chat_id;
 		
-		const messageUrl = `https://api.vk.com/method/messages.getConversationMembers?peer_id=${id}&fields=photo_50&access_token=${App.vkToken}&v=5.199`;
-
-		try {
-			let response = await axios.get(messageUrl) 
-			if(response.data.error) {
-				const error = response.data.error;
-				res.json( {
-					error: error.error_code,
-					message: error.error_msg
-				});
-				return;	
-			}
-			let reponse = response.data.response;
-			reponse.profiles.forEach((el: any) => {
-				const user = usersArray.find(u => u.id === el.id);
-				if (user) {
-					user.avatar = el.photo_50;
-					user.name = `${el.first_name} ${el.last_name}`;
-				}
-			});
-			reponse.groups.forEach((el: any) => {
-				const user = usersArray.find(u => u.id === -el.id);
-				if (user) {
-					user.avatar = el.photo_50;
-					user.name = el.name;
-				}
-			});
-			
-		} catch(e) {
-			res.json({error: 1});
+		const error = await this.updatePhotoInInfo(id, usersArray);
+		if(error) {
+			res.json(error);
 			return;
 		}
 
@@ -199,4 +196,90 @@ export class ChatController extends AbstractController
 		
 		res.json(usersArray);
     }
+
+	async getBannedUsers(req: Request, res: Response) {
+        const validationResult = this.validateInfo(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        let { id, type } = validationResult.value;
+		
+		
+		let query: string = `
+			SELECT 
+				b.*
+			FROM banlist b
+			WHERE b.chat_id =
+		`;
+		if(type === "peer_id") {
+			query += "?";
+		} else {
+			query += `
+				(
+					SELECT
+						chat_id
+					FROM chats
+					WHERE chat_uid = ?
+					LIMIT 1
+				)
+			`;
+		}
+
+		const queryParams = [id];
+
+        const results: any = await this.db.query(query, queryParams);
+		if(!results) {
+			res.json({ error: "Заблокированных пользователей в чате не найдено" });
+		}
+		
+		const usersArray: BanInfo[] = results.map(bannedUser);
+		
+		id = results[0].chat_id;
+		const error = await this.updatePhotoInInfo(id, usersArray);
+		if(error) {
+			res.json(error);
+			return;
+		}
+		
+		res.json(usersArray);
+    }
+
+
+	private async updatePhotoInInfo(id: number, users: defaultUserInfo[]): Promise<any|undefined>
+	{
+		
+		const messageUrl = `https://api.vk.com/method/messages.getConversationMembers?peer_id=${id}&fields=photo_50&access_token=${App.vkToken}&v=5.199`;
+
+		try {
+			let response = await axios.get(messageUrl) 
+			if(response.data.error) {
+				const error = response.data.error;
+				return {
+					error: error.error_code,
+					message: error.error_msg
+				};	
+			}
+			let reponse = response.data.response;
+			reponse.profiles.forEach((el: any) => {
+				const user = users.find(u => u.id === el.id);
+				if (user) {
+					user.avatar = el.photo_50;
+					user.name = `${el.first_name} ${el.last_name}`;
+				}
+			});
+			reponse.groups.forEach((el: any) => {
+				const user = users.find(u => u.id === -el.id);
+				if (user) {
+					user.avatar = el.photo_50;
+					user.name = el.name;
+				}
+			});
+			
+		} catch(e) {
+			return e;
+		}
+	}
 }
