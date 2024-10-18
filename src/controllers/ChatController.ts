@@ -12,6 +12,7 @@ interface UserInfo
 	avatar?: string;
 	name: string;
 	roleName: string|null;
+	nick: string|null;
 }
 
 function user(data: any): UserInfo
@@ -20,7 +21,8 @@ function user(data: any): UserInfo
 		id: data.user_id,
 		role: data.role,
 		name: "",
-		roleName: data.roleName
+		roleName: data.roleName,
+		nick: data.nick
 	};
 }
 
@@ -117,9 +119,11 @@ export class ChatController extends AbstractController
 		let query: string = `
 			SELECT 
 				u.*,
-				r.name roleName
+				r.name roleName,
+				n.nick
 			FROM users u
 			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
+			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
 			WHERE u.chat_id =
 		`;
 		if(type === "peer_id") {
