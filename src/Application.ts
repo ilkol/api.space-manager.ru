@@ -2,9 +2,11 @@ import express, { Request, Response, Application, NextFunction } from 'express';
 import cors from 'cors';
 
 import { DB } from "./DB";
-import userRoutes from './routes/user';
 import { PoolOptions } from 'mysql2';
 import { AuthMiddleware } from './middleware/authtorization';
+
+import userRoutes from './routes/user';
+import chatRoutes from './routes/chat';
 
 export class App
 {
@@ -38,7 +40,8 @@ export class App
     }
 
     private routes(): void {
-        this.app.use('/user', userRoutes(this.db)); // Передаем экземпляр DB в роуты
+        this.app.use('/user', userRoutes(this.db));
+        this.app.use('/chat', chatRoutes(this.db));
     }
 
     private errorHandling(): void {
