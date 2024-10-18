@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
+import Joi from 'joi';
 
 export class UserController extends AbstractController
 {
@@ -18,12 +19,35 @@ export class UserController extends AbstractController
         res.json({ userId });
     };
 
-    async getActiveChatsList(req: Request, res: Response)
-    {
-        const userId = req.params.id;
-        
-        const query = `
-            SELECT u.chat_id id, 
+	private validateActiveChatsList(req: Request) {
+        const schema = Joi.object({
+            id: Joi.number().integer().required(),
+        });
+
+        const { error, value } = schema.validate({ 
+            id: req.params.id, 
+        });
+
+        if (error) {
+            return { error: error.details[0].message };
+        }
+
+        return { value };
+    }
+
+	async getActiveChatsList(req: Request, res: Response) {
+        const validationResult = this.validateActiveChatsList(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        const { id } = validationResult.value;
+
+		const query = `
+			SELECT 
+				c.chat_uid id, 
 				c.title title, 
 				c.photo_link avatar,
 				count_table.count count
@@ -37,9 +61,11 @@ export class UserController extends AbstractController
 			) count_table USING(chat_id)
 			WHERE u.user_id = ?
 			AND u.in_chat = 1
-        `;
+		`;
+		const queryParams = [id];
 
-        const results = await this.db.query(query, [userId]);
+        const results = await this.db.query(query, queryParams);
+        
         res.json(results);
     }
 
@@ -56,11 +82,11 @@ export class UserController extends AbstractController
 		`;
 		const [results]: any = await this.db.query(query, [userId]);
 
-		// Если результат существует и не пустой, отправляем первый элемент массива
 		if (results) {
 			res.json(results);
 		} else {
 			res.json({ messages: 0 });
 		}
 	}
+
 }
