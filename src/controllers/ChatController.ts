@@ -91,7 +91,28 @@ export class ChatController extends AbstractController
 		let query: string;
 		if(type === "peer_id") {
 			query = `
-				SELECT * FROM chats c
+				SELECT 
+					c.chat_id uid,
+					c.status 'status',
+					c.title title,
+					c.photo_link avatar,
+					c.messages messages,
+					
+					count_table.count membersCount,
+					ban_count_table.count bannedUsersCount
+				FROM chats c
+				LEFT JOIN (
+					SELECT u.chat_id, COUNT(*) AS count
+					FROM users u
+					WHERE u.in_chat = 1
+					GROUP BY u.chat_id
+				) count_table USING(chat_id)
+				LEFT JOIN (
+					SELECT b.chat_id, COUNT(*) AS count
+					FROM banlist b
+					GROUP BY b.chat_id
+				) ban_count_table USING(chat_id)
+
 				WHERE c.chat_id = ?
 				LIMIT 1;
 			`;
@@ -104,7 +125,8 @@ export class ChatController extends AbstractController
 					c.photo_link avatar,
 					c.messages messages,
 					
-					count_table.count membersCount
+					count_table.count membersCount,
+					ban_count_table.count bannedUsersCount
 				FROM chats c
 				LEFT JOIN (
 					SELECT u.chat_id, COUNT(*) AS count
@@ -112,7 +134,11 @@ export class ChatController extends AbstractController
 					WHERE u.in_chat = 1
 					GROUP BY u.chat_id
 				) count_table USING(chat_id)
-				
+				LEFT JOIN (
+					SELECT b.chat_id, COUNT(*) AS count
+					FROM banlist b
+					GROUP BY b.chat_id
+				) ban_count_table USING(chat_id)
 				WHERE c.chat_uid = ?
 				LIMIT 1;
 			`;
