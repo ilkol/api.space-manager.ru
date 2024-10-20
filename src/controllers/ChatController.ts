@@ -50,6 +50,12 @@ function bannedUser(data: any): BanInfo
 	};
 }
 
+interface ChatMemberStatistics extends UserInfo
+{
+
+	
+}
+
 export class ChatController extends AbstractController
 {
     constructor(db: DB)
@@ -193,7 +199,7 @@ export class ChatController extends AbstractController
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
-		if(!results) {
+		if(!results || results.length === 0) {
 			res.json({ error: "Пользователей в чате не найдено" });
 		}
 		
@@ -257,7 +263,7 @@ export class ChatController extends AbstractController
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
-		if(!results) {
+		if(!results || results.length === 0) {
 			res.json({ error: "Заблокированных пользователей в чате не найдено" });
 		}
 		
@@ -308,4 +314,95 @@ export class ChatController extends AbstractController
 			return e;
 		}
 	}
+
+	private validateMemberStats(req: Request) {
+		const schema = Joi.object({
+            chat: Joi.alternatives().try(
+				Joi.number().integer().min(2000000001).message("Chat ID should be a number starting from 2000000001"),
+				Joi.string().min(3).message("Chat ID should be a string with at least 3 characters")
+			).required().messages({
+				'any.required': 'Chat ID is required'
+			}),
+			type: Joi.string().valid('peer_id', 'uid').required().messages({
+				'any.only': "Type must be either 'peer_id' or 'uid'",
+				'any.required': 'Type is required'
+			}),
+			user: Joi.number().integer().required().messages({
+				'any.required': 'user ID is required'
+			})
+        });
+
+		console.log("Validating:", {
+			chat: req.params.chat,
+			user: req.params.user,
+			type: req.query.type
+		});
+	
+		const { error, value } = schema.validate({ 
+			chat: req.params.chat, 
+			user: req.params.user, 
+			type: req.query.type 
+		});
+	
+		if (error) {
+			console.error("Validation error:", error.details[0].message);
+			return { error: error.details[0].message };
+		}
+	
+		return { value };
+    }
+
+	async getMemberStats(req: Request, res: Response) {
+        const validationResult = this.validateMemberStats(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        let { chat, user, type } = validationResult.value;
+		
+		
+		let query: string = `
+			SELECT 
+				u.*,
+				r.name roleName,
+				n.nick
+			FROM users u
+			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
+			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
+			WHERE u.user_id = ? AND u.chat_id =
+		`;
+		if(type === "peer_id") {
+			query += "?";
+		} else {
+			query += `
+				(
+					SELECT
+						chat_id
+					FROM chats
+					WHERE chat_uid = ?
+					LIMIT 1
+				)
+			`;
+		}
+
+		const queryParams = [user, chat];
+
+        const results: any = await this.db.query(query, queryParams);
+		if(!results || results.length === 0) {
+			res.json({ error: "Статистика участника чата не найдена" });
+		}
+		
+		const info = <ChatMemberStatistics>results;
+		const id = results[0].chat_id;
+
+		const error = await this.updatePhotoInInfo(id, [info]);
+		if(error) {
+			res.json(error);
+			return;
+		}
+
+		res.json(info);
+    }
 }
