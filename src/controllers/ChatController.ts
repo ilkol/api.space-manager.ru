@@ -370,6 +370,7 @@ export class ChatController extends AbstractController
 				mute,
 				togglenotify,
 				immunity,
+				join_date,
 
 				r.name roleName,
 				r_immunity.name immunityRole,
