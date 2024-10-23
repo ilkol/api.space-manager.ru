@@ -52,8 +52,25 @@ function bannedUser(data: any): BanInfo
 
 interface ChatMemberStatistics extends UserInfo
 {
-
+	immunity: number;
+	immunityRole: string|null;
 	
+}
+
+const defaultRolesName: Map<number, string> = new Map([
+	[0, "Участник"],
+	[20, "Модератор"],
+	[40, "Старший Модератор"],
+	[60, "Администратор"],
+	[80, "Старший Администратор"],
+	[100, "Создатель чата"]
+]);
+
+function checkDefaultRole(user: UserInfo)
+{
+	if(user.roleName === null) {
+		user.roleName = defaultRolesName.get(user.role) ?? "Ошибка";
+	} 
 }
 
 export class ChatController extends AbstractController
@@ -212,19 +229,7 @@ export class ChatController extends AbstractController
 			return;
 		}
 
-		const roles: Map<number, string> = new Map([
-			[0, "Участник"],
-			[20, "Модератор"],
-			[40, "Ст. Модератор"],
-			[60, "Администратор"],
-			[80, "Ст. Администратор"],
-			[100, "Создатель"]
-		]);
-		usersArray.map(user => {
-			if(user.roleName === null) {
-				user.roleName = roles.get(user.role) ?? "Ошибка";
-			} 
-		});
+		usersArray.map(checkDefaultRole);
 		
 		res.json(usersArray);
     }
@@ -331,12 +336,6 @@ export class ChatController extends AbstractController
 				'any.required': 'user ID is required'
 			})
         });
-
-		console.log("Validating:", {
-			chat: req.params.chat,
-			user: req.params.user,
-			type: req.query.type
-		});
 	
 		const { error, value } = schema.validate({ 
 			chat: req.params.chat, 
@@ -365,11 +364,19 @@ export class ChatController extends AbstractController
 		
 		let query: string = `
 			SELECT 
-				u.*,
+				u.user_id id,
+				u.role,
+				warns, 
+				mute,
+				togglenotify,
+				immunity,
+
 				r.name roleName,
+				r_immunity.name immunityRole,
 				n.nick
 			FROM users u
 			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
+			LEFT JOIN roles r_immunity ON r_immunity.chat_id = u.chat_id AND r_immunity.level = u.immunity
 			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
 			WHERE u.user_id = ? AND u.chat_id =
 		`;
@@ -389,19 +396,24 @@ export class ChatController extends AbstractController
 
 		const queryParams = [user, chat];
 
-        const results: any = await this.db.query(query, queryParams);
-		if(!results || results.length === 0) {
+        const [results]: any = await this.db.query(query, queryParams);
+		if(!results) {
 			res.json({ error: "Статистика участника чата не найдена" });
 		}
 		
 		const info = <ChatMemberStatistics>results;
-		const id = results[0].chat_id;
+		const id = results.id;
 
 		const error = await this.updatePhotoInInfo(id, [info]);
 		if(error) {
 			res.json(error);
 			return;
 		}
+
+		checkDefaultRole(info);
+		if(info.immunity !== 0 && info.immunityRole === null) {
+			info.immunityRole = defaultRolesName.get(info.immunity) ?? "Ошибка";
+		} 
 
 		res.json(info);
     }
