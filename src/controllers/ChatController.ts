@@ -283,6 +283,55 @@ export class ChatController extends AbstractController
 		
 		res.json(usersArray);
     }
+	async getSettings(req: Request, res: Response) {
+        const validationResult = this.validateInfo(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        let { id, type } = validationResult.value;
+		
+		
+		let query: string = `
+			SELECT 
+				chat_id uid,
+				togglefeed toggleFeed,
+				kickmenu kickMenu,
+				leavemenu leaveMenu,
+				hideusers hideUsers,
+				nameType nameType,
+				unPunishNotify unPunishNotify,
+				unRoleAfterKick unRoleAfterKick,
+				autounban autounban,
+				roleLevelStats roleLevelStats
+			FROM settings s
+			WHERE s.chat_id =
+		`;
+		if(type === "peer_id") {
+			query += "?";
+		} else {
+			query += `
+				(
+					SELECT
+						chat_id
+					FROM chats
+					WHERE chat_uid = ?
+					LIMIT 1
+				)
+			`;
+		}
+
+		const queryParams = [id];
+
+        const [results]: any = await this.db.query(query, queryParams);
+		if(!results) {
+			res.json({ error: "Прозошла ошибка при получении настроек чата" });
+		}
+		
+		res.json(results);
+    }
 
 
 	private async updatePhotoInInfo(id: number, users: defaultUserInfo[]): Promise<any|undefined>
