@@ -373,6 +373,26 @@ export class ChatController extends AbstractController
 					message: error.error_msg
 				};	
 			}
+
+			let profiles = response.data.response.profiles;
+			let groups = response.data.response.groups;
+
+			await Promise.all(users.map(async (user) => {
+				const profile = profiles.find((el: any) => el.id === user.id);
+				const group = groups.find((el: any) => el.id === -user.id);
+
+				if (profile) {
+					user.avatar = profile.photo_50;
+					user.name = `${profile.first_name} ${profile.last_name}`;
+				}
+				if (group) {
+					user.avatar = group.photo_50;
+					user.name = group.name;
+				}
+			}));
+
+			/* 
+			// Оставил старый код, мало ли вернуть захочу			
 			let reponse = response.data.response;
 			reponse.profiles.forEach((el: any) => {
 				const user = users.find(u => u.id === el.id);
@@ -387,7 +407,7 @@ export class ChatController extends AbstractController
 					user.avatar = el.photo_50;
 					user.name = el.name;
 				}
-			});
+			}); */
 			
 		} catch(e) {
 			return e;
