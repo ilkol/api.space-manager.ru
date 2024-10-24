@@ -268,8 +268,13 @@ export class ChatController extends AbstractController
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
-		if(!results || results.length === 0) {
-			res.json({ error: "Заблокированных пользователей в чате не найдено" });
+		if(!results) {
+			res.json({ error: "Прозиошла ошибка при выполнении запроса." });
+			return;
+		}
+		if(results.length === 0) {
+			res.json([]);
+			return;
 		}
 		
 		const usersArray: BanInfo[] = results.map(bannedUser);
