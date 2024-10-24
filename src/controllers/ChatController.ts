@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
-import Joi from 'joi';
+import Joi, { number } from 'joi';
 import { App } from '../Application';
 import axios from 'axios';
 
@@ -29,6 +29,22 @@ function user(data: any): UserInfo
 		roleName: data.roleName,
 		nick: data.nick
 	};
+}
+
+interface Role
+{
+	name: string;
+	level: number;
+	emoji: string;
+}
+
+function rolesArrayFromDB(results: any[])
+{
+	const roles = new Map<number, Role>();
+	results.forEach(row => {
+		roles.set(row.level, row);
+	});
+	return roles;
 }
 
 interface BanInfo extends defaultUserInfo
@@ -336,6 +352,58 @@ export class ChatController extends AbstractController
 		}
 		
 		res.json(results);
+    }
+	async getRoles(req: Request, res: Response) {
+        const validationResult = this.validateInfo(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        let { id, type } = validationResult.value;
+		
+		
+		let query: string = `
+			SELECT 
+				name,
+				level,
+				emoji
+			FROM roles
+			WHERE chat_id =
+		`;
+		if(type === "peer_id") {
+			query += "?";
+		} else {
+			query += `
+				(
+					SELECT
+						chat_id
+					FROM chats
+					WHERE chat_uid = ?
+					LIMIT 1
+				)
+			`;
+		}
+
+		const queryParams = [id];
+
+        const results: any = await this.db.query(query, queryParams);
+		if(!results) {
+			res.json({ error: "Прозошла ошибка при получении ролей чата" });
+		}
+		const roles: Map<number, Role> = rolesArrayFromDB(results);
+		defaultRolesName.forEach((name, level) => {
+			if(!roles.has(level)) {
+			  roles.set(level, {
+				name: name,
+				level: level,
+				emoji: ""
+			  });
+			}
+		});
+		
+		res.json((Array.from(roles.values())).reverse());
     }
 
 

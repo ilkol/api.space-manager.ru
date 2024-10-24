@@ -24,6 +24,7 @@ export default (db: DB) => {
 		route('/:id/getMembers', controller.getMembers.bind(controller)),
 		route('/:id/getBannedUsers', controller.getBannedUsers.bind(controller)),
 		route('/:id/getSettings', controller.getSettings.bind(controller)),
+		route('/:id/getRoles', controller.getRoles.bind(controller)),
 		
 		route('/:chat/user/:user/getStats', controller.getMemberStats.bind(controller)),
 		
