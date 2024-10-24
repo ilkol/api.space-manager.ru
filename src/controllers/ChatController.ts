@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
-import Joi, { number } from 'joi';
+import Joi from 'joi';
 import { App } from '../Application';
 import axios from 'axios';
 
@@ -215,20 +215,8 @@ export class ChatController extends AbstractController
 			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
 			WHERE u.in_chat = 1 AND u.chat_id =
 		`;
-		if(type === "peer_id") {
-			query += "?";
-		} else {
-			query += `
-				(
-					SELECT
-						chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-
+		query = this.buildChatQuery(query, type);
+		
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
@@ -267,20 +255,8 @@ export class ChatController extends AbstractController
 			FROM banlist b
 			WHERE b.chat_id =
 		`;
-		if(type === "peer_id") {
-			query += "?";
-		} else {
-			query += `
-				(
-					SELECT
-						chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-
+		query = this.buildChatQuery(query, type);
+		
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
@@ -330,20 +306,8 @@ export class ChatController extends AbstractController
 			FROM settings s
 			WHERE s.chat_id =
 		`;
-		if(type === "peer_id") {
-			query += "?";
-		} else {
-			query += `
-				(
-					SELECT
-						chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-
+		query = this.buildChatQuery(query, type);
+		
 		const queryParams = [id];
 
         const [results]: any = await this.db.query(query, queryParams);
@@ -372,20 +336,8 @@ export class ChatController extends AbstractController
 			FROM roles
 			WHERE chat_id =
 		`;
-		if(type === "peer_id") {
-			query += "?";
-		} else {
-			query += `
-				(
-					SELECT
-						chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-
+		query = this.buildChatQuery(query, type);
+		
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
@@ -403,7 +355,7 @@ export class ChatController extends AbstractController
 			}
 		});
 		
-		res.json((Array.from(roles.values())).reverse());
+		res.json(Array.from(roles.values()).sort((a, b) => b.level - a.level));
     }
 
 
@@ -513,20 +465,8 @@ export class ChatController extends AbstractController
 			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
 			WHERE u.user_id = ? AND u.chat_id =
 		`;
-		if(type === "peer_id") {
-			query += "?";
-		} else {
-			query += `
-				(
-					SELECT
-						chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-
+		query = this.buildChatQuery(query, type);
+		
 		const queryParams = [user, chat];
 
         const [results]: any = await this.db.query(query, queryParams);
@@ -550,4 +490,19 @@ export class ChatController extends AbstractController
 
 		res.json(info);
     }
+
+	private buildChatQuery(baseQuery: string, type: string): string {
+		if (type === "peer_id") {
+			return baseQuery + "?";
+		} else {
+			return baseQuery + `
+				(
+					SELECT chat_id
+					FROM chats
+					WHERE chat_uid = ?
+					LIMIT 1
+				)
+			`;
+		}
+	}
 }
