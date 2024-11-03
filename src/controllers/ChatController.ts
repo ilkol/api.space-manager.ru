@@ -510,6 +510,63 @@ export class ChatController extends AbstractController
 
 		res.json(info);
     }
+	async getMemberRights(req: Request, res: Response) {
+        const validationResult = this.validateMemberStats(req);
+
+        if (validationResult.error) {
+            res.status(400).json({ error: validationResult.error });
+			return;
+        }
+
+        let { chat, user, type } = validationResult.value;
+		
+		
+		let query: string = `
+			SELECT 
+				c.*
+			FROM commands c
+			WHERE c.chat_id = 
+		`;
+		query = this.buildChatQuery(query, type);
+		query += ' LIMIT 1';
+		
+
+        const [commandsAccess]: any = await this.db.query(query, [chat]);
+
+		if(!commandsAccess) {
+			res.json({ error: "Не найдены права на использование команд в чате." });
+		}
+
+		query = `
+			SELECT 
+				role
+			FROM users
+			WHERE user_id = ? AND chat_id = 
+		`;
+		query = this.buildChatQuery(query, type);
+		query += ' LIMIT 1';
+		
+
+        const [userInfo]: any = await this.db.query(query, [user, chat]);
+		if(!userInfo) {
+			res.json({ error: "Участник чата не найден." });
+		}
+		
+		const result: { user_id: number; chat_id: number; [key: string]: any } = {
+			user_id: user,
+			chat_id: chat,
+		};
+
+		const role = userInfo.role;
+		for (const key in commandsAccess) {
+			if(key === 'id' || key === 'chat_id') continue;
+			const value = commandsAccess[key as keyof typeof commandsAccess];
+			const [minRole, additionalParam1, additionalParam2] = value.split('|').map(Number);
+			result[key] = role >= minRole;
+		}
+
+		res.json(result);
+    }
 
 	private buildChatQuery(baseQuery: string, type: string): string {
 		if (type === "peer_id") {
