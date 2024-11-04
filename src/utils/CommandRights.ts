@@ -1,4 +1,4 @@
 export enum CommandRights {
-	'help',
-	'settings'
+	help = 'help',
+	settings = 'settings'
 }
