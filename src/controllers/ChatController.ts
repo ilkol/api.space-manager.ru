@@ -371,7 +371,17 @@ export class ChatController extends AbstractController
 				unPunishNotify unPunishNotify,
 				unRoleAfterKick unRoleAfterKick,
 				autounban autounban,
-				roleLevelStats roleLevelStats
+				roleLevelStats roleLevelStats,
+				si_messages,
+				si_smilies,
+				si_stickers,
+				si_reply,
+				si_photo,
+				si_video,
+				si_files,
+				si_audio,
+				si_reposts,
+				si_mats
 			FROM settings s
 			WHERE s.chat_id =
 		`;
