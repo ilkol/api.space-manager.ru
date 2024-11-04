@@ -1,4 +1,5 @@
 import express, { Request, Response, Application, NextFunction } from 'express';
+import multer from 'multer';
 import cors from 'cors';
 
 import { DB } from "./DB";
@@ -45,6 +46,10 @@ export class App
             credentials: true
         }));
 		this.app.use(AuthMiddleware);
+		this.app.use(express.json());
+		this.app.use(express.urlencoded({ extended: true }));
+		const upload = multer();
+		this.app.use(upload.none());
     }
 
     private routes(): void {

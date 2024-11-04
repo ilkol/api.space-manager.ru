@@ -167,10 +167,10 @@ export class ChatController extends AbstractController
 
         const { error, value } = schema.validate({ 
             id: req.params.id, 
-            type: req.query.type,
-			setting: req.query.setting,
-			value: req.query.value,
-			user_id: req.query.user_id
+            type: req.body.type,
+			setting: req.body.setting,
+			value: req.body.value,
+			user_id: req.body.user_id
         });
 
         if (error) {
