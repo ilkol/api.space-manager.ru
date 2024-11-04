@@ -16,7 +16,12 @@ export class DB {
             });
     }
 
-    // Асинхронный запрос к базе данных с использованием промисов
+	/**
+	 * Асинхронный запрос к базе данных
+	 * @param query запрос
+	 * @param params параметры для подстановки в запрос
+	 * @returns результат при успешном выполнении и null при выброшенном исключении
+	 */
     public async query(query: string, params?: any[]): Promise<mysql.QueryResult|null> {
         try {
             const [results] = await this.connection.query(query, params);
