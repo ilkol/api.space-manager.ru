@@ -3,15 +3,21 @@ import { UserController } from '../controllers/UserController';
 import { DB } from '../DB';
 import { ChatController } from '../controllers/ChatController';
 
+enum Method {
+	get,
+	post
+}
+
 interface Route
 {
     path: string;
     controller: RequestHandler;
+	method: Method
 }
 
-function route(path: string, controller: RequestHandler): Route
+function route(path: string, controller: RequestHandler, method: Method = Method.get): Route
 {
-    return {path, controller};
+    return {path, controller, method};
 }
 
 export default (db: DB) => {
@@ -25,7 +31,7 @@ export default (db: DB) => {
 		route('/:id/getBannedUsers', controller.getBannedUsers.bind(controller)),
 
 		route('/:id/getSettings', controller.getSettings.bind(controller)),
-		route('/:id/setSetting', controller.setSetting.bind(controller)),
+		route('/:id/setSetting', controller.setSetting.bind(controller), Method.post),
 
 		route('/:id/getRoles', controller.getRoles.bind(controller)),
 		
@@ -35,7 +41,12 @@ export default (db: DB) => {
     ];
 
     routes.forEach((route) => {
-        router.get(route.path, route.controller);
+		if(route.method === Method.get) {
+			router.get(route.path, route.controller);
+		}
+		else {
+			router.post(route.path, route.controller);
+		}
     })
 
     return router;
