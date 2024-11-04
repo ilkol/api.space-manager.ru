@@ -372,6 +372,8 @@ export class ChatController extends AbstractController
 				unRoleAfterKick unRoleAfterKick,
 				autounban autounban,
 				roleLevelStats roleLevelStats,
+				muteType,
+				
 				si_messages,
 				si_smilies,
 				si_stickers,
