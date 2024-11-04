@@ -8,6 +8,7 @@ export const ErrorMiddleware = (err: Error, req: Request, res: Response, next: N
 			message: err.message
 		} });
     } else {
+		console.error(err);
         res.status(500).json({ error: {
 			code: 0,
 			message: "Неизвестная ошибка"
