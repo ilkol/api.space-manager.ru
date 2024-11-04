@@ -1,9 +1,11 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
 import Joi from 'joi';
 import { App } from '../Application';
 import axios from 'axios';
+import { CommandRights } from '../utils/CommandRights';
+import { Errors } from '../Exceptions';
 
 interface defaultUserInfo
 {
@@ -99,10 +101,24 @@ export class ChatController extends AbstractController
 	private validateInfo(req: Request) {
 		const schema = Joi.object({
             id: Joi.alternatives().try(
-                Joi.number().integer().min(2000000001),
-                Joi.string().min(3)
-            ).required(),
-            type: Joi.string().valid('peer_id', 'uid').required()
+                Joi.number().integer().min(2000000001).messages({
+					'number.base': 'ID должно быть числом.',
+					'number.integer': 'ID должно быть целым числом.',
+					'number.min': 'ID должен быть больше или равен 2000000001.'
+				}),
+                Joi.string().min(3).messages({
+					'string.base': 'ID должно бытьстрокой.',
+          	  		'string.min': 'ID должно содержать как минимум 3 символа.'
+				})
+            ).required().messages({
+				'alternatives.match': 'ID должен быть либо числом, либо строкой.',
+				'any.required': 'ID обязательный параметр.'
+			}),
+            type: Joi.string().valid('peer_id', 'uid').required().messages({
+				'string.base': 'Type должно быть строкой.',
+				'any.only': 'Type принимает значения: peer_id, uid.',
+				'any.required': 'Type обязательный параметр.'
+			})
         });
 
         const { error, value } = schema.validate({ 
@@ -116,12 +132,60 @@ export class ChatController extends AbstractController
 
         return { value };
     }
+	private validateSetSettings(req: Request) {
+		const schema = Joi.object({
+            id: Joi.alternatives().try(
+                Joi.number().integer().min(2000000001),
+                Joi.string().min(3)
+            ).required(),
+            type: Joi.string().valid('peer_id', 'uid').required(),
+			setting: Joi.string().valid(
+				'togglefeed',
+				'kickmenu',
+				'leavemenu',
+				'hideusers',
+				'nameType',
+				'unPunishNotify',
+				'unRoleAfterKick',
+				'autounban',
+				'roleLevelStats',
+				'muteType',
+				'si_messages',
+				'si_smilies',
+				'si_stickers',
+				'si_reply',
+				'si_photo',
+				'si_video',
+				'si_files',
+				'si_audio',
+				'si_reposts',
+				'si_mats'
+			).required(),
+			value: Joi.bool().required(),
+			user_id: Joi.number().integer().min(1).max(2000000000).required()
+        });
 
-	async getInfo(req: Request, res: Response) {
+        const { error, value } = schema.validate({ 
+            id: req.params.id, 
+            type: req.query.type,
+			setting: req.query.setting,
+			value: req.query.value,
+			user_id: req.query.user_id
+        });
+
+        if (error) {
+            return { error: error.details[0].message };
+        }
+
+        return { value };
+    }
+	
+
+	async getInfo(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -190,15 +254,15 @@ export class ChatController extends AbstractController
 		if (results) {
 			res.json(results);
 		} else {
-			res.json({ error: "Данные чата не найдены" });
+			next(new Errors.QueryError("Данные чата не найдены"));
 		}
     }
 
-	async getMembers(req: Request, res: Response) {
+	async getMembers(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -220,8 +284,13 @@ export class ChatController extends AbstractController
 		const queryParams = [id];
 
         const results: any = await this.db.query(query, queryParams);
-		if(!results || results.length === 0) {
-			res.json({ error: "Пользователей в чате не найдено" });
+		if(!results) {
+			next(new Errors.QueryError("Данные о пользователях в чате не найдены"));
+			return;
+		}
+		if(results.length === 0) {
+			res.json([]);
+			return;
 		}
 		
 		const usersArray: UserInfo[] = results.map(user);
@@ -238,11 +307,11 @@ export class ChatController extends AbstractController
 		res.json(usersArray);
     }
 
-	async getBannedUsers(req: Request, res: Response) {
+	async getBannedUsers(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -261,7 +330,7 @@ export class ChatController extends AbstractController
 
         const results: any = await this.db.query(query, queryParams);
 		if(!results) {
-			res.json({ error: "Прозиошла ошибка при выполнении запроса." });
+			next(new Errors.QueryError("Заблокированные пользователи не найдены"));
 			return;
 		}
 		if(results.length === 0) {
@@ -280,11 +349,11 @@ export class ChatController extends AbstractController
 		
 		res.json(usersArray);
     }
-	async getSettings(req: Request, res: Response) {
+	async getSettings(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -312,16 +381,55 @@ export class ChatController extends AbstractController
 
         const [results]: any = await this.db.query(query, queryParams);
 		if(!results) {
-			res.json({ error: "Прозошла ошибка при получении настроек чата" });
+			next(new Errors.QueryError("Настройки чата не найдены"));
+			return;
 		}
 		
 		res.json(results);
     }
-	async getRoles(req: Request, res: Response) {
+	async setSetting(req: Request, res: Response, next: NextFunction) {
+        const validationResult = this.validateSetSettings(req);
+
+        if (validationResult.error) {
+			next(new Errors.ParamsValidationError(validationResult.error));
+			return;
+        }
+
+        let { id, type, setting, value, user_id } = validationResult.value;
+		
+		try {
+			if(!(await this.checkMemberRight(user_id, id, type, CommandRights.settings))) {
+				next(new Errors.NoPermissions());	
+				return;
+			}
+		} catch(e) {
+			next(e);
+			return;
+		}
+		
+		let query: string = `
+			UPDATE settings
+			SET 
+				${setting} = ${value ? 1 : 0}
+			WHERE chat_id =
+		`;
+		query = this.buildChatQuery(query, type);
+		
+		const queryParams = [id];
+
+        const results = await this.db.query(query, queryParams);
+		if(!results) {
+			next(new Errors.QueryError("Не удалось изменить настройки"));
+			return;
+		}
+		
+		res.json(true);
+    }
+	async getRoles(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -342,7 +450,8 @@ export class ChatController extends AbstractController
 
         const results: any = await this.db.query(query, queryParams);
 		if(!results) {
-			res.json({ error: "Прозошла ошибка при получении ролей чата" });
+			next(new Errors.QueryError("Не удалось запросить роли в чате"));
+			return;
 		}
 		const roles: Map<number, Role> = rolesArrayFromDB(results);
 		defaultRolesName.forEach((name, level) => {
@@ -445,11 +554,11 @@ export class ChatController extends AbstractController
 		return { value };
     }
 
-	async getMemberStats(req: Request, res: Response) {
+	async getMemberStats(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateMemberStats(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -491,7 +600,8 @@ export class ChatController extends AbstractController
 
         const [results]: any = await this.db.query(query, queryParams);
 		if(!results) {
-			res.json({ error: "Статистика участника чата не найдена" });
+			next(new Errors.QueryError("Статистика участника чата не найдена"));
+			return;
 		}
 		
 		const info = <ChatMemberStatistics>results;
@@ -510,11 +620,48 @@ export class ChatController extends AbstractController
 
 		res.json(info);
     }
-	async getMemberRights(req: Request, res: Response) {
+	async checkMemberRight(user: number, chat: string, chatIDType: string, setting: CommandRights): Promise<boolean>
+	{
+		let query: string = `
+			SELECT 
+				${setting}
+			FROM commands c
+			WHERE c.chat_id = 
+		`;
+		query = this.buildChatQuery(query, chatIDType);
+		query += ' LIMIT 1';
+
+		const [result]: any = await this.db.query(query, [chat]);
+
+		if(!result) {
+			throw new Errors.QueryError('Не найдены права для этого чата');
+		}
+
+		query = `
+			SELECT 
+				role
+			FROM users
+			WHERE user_id = ? AND chat_id = 
+		`;
+		query = this.buildChatQuery(query, chatIDType);
+		query += ' LIMIT 1';
+		
+
+        const [userInfo]: any = await this.db.query(query, [user, chat]);
+		if(!userInfo) {
+			throw new Errors.QueryError('Не найдены информация о пользователе чата');
+		}
+
+		const value = result[setting];
+		const [minRole] = value.split('|').map(Number);
+
+		return userInfo.role >= minRole;
+	}
+	async getMemberRights(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateMemberStats(req);
 
         if (validationResult.error) {
-            res.status(400).json({ error: validationResult.error });
+			next(new Errors.ParamsValidationError(validationResult.error));
 			return;
         }
 
@@ -534,7 +681,8 @@ export class ChatController extends AbstractController
         const [commandsAccess]: any = await this.db.query(query, [chat]);
 
 		if(!commandsAccess) {
-			res.json({ error: "Не найдены права на использование команд в чате." });
+			next(new Errors.QueryError("Не найдены права на использование команд в чате."));
+			return;
 		}
 
 		query = `
@@ -549,7 +697,8 @@ export class ChatController extends AbstractController
 
         const [userInfo]: any = await this.db.query(query, [user, chat]);
 		if(!userInfo) {
-			res.json({ error: "Участник чата не найден." });
+			next(new Errors.QueryError("Не найдены данные об участнике чата"));
+			return;
 		}
 		
 		const result: { user_id: number; chat_id: number; [key: string]: any } = {

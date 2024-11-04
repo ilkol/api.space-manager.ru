@@ -7,6 +7,7 @@ import { AuthMiddleware } from './middleware/authtorization';
 
 import userRoutes from './routes/user';
 import chatRoutes from './routes/chat';
+import { ErrorMiddleware } from './middleware/ErrorCather';
 
 export class App
 {
@@ -58,6 +59,7 @@ export class App
     }
 
     public start(): void {
+		this.app.use(ErrorMiddleware);
         this.app.listen(this.port, () => {
             console.log(`Запуск API сервера на порту ${this.port}`);
         });

@@ -25,7 +25,7 @@ export default (db: DB) => {
 		route('/:id/getBannedUsers', controller.getBannedUsers.bind(controller)),
 
 		route('/:id/getSettings', controller.getSettings.bind(controller)),
-		// route('/:id/setSetting', controller.getSettings.bind(controller)),
+		route('/:id/setSetting', controller.setSetting.bind(controller)),
 
 		route('/:id/getRoles', controller.getRoles.bind(controller)),
 		
