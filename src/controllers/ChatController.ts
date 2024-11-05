@@ -6,6 +6,7 @@ import { App } from '../Application';
 import axios from 'axios';
 import { CommandRights } from '../utils/CommandRights';
 import { Errors } from '../Exceptions';
+import { VKAPI } from '../VK/API';
 
 interface defaultUserInfo
 {
@@ -482,21 +483,25 @@ export class ChatController extends AbstractController
 
 	private async updatePhotoInInfo(id: number, users: defaultUserInfo[]): Promise<any|undefined>
 	{
-		
-		const messageUrl = `https://api.vk.com/method/messages.getConversationMembers?peer_id=${id}&fields=photo_50&access_token=${App.vkToken}&v=5.199`;
-
 		try {
-			let response = await axios.get(messageUrl) 
-			if(response.data.error) {
-				const error = response.data.error;
+			const result = await VKAPI.getConversationMembers({
+				peer_id: id,
+				fields: "photo_50"
+			});
+
+			if(result.error) {
+				const error = result.error;
+				console.error("Ошибка при выполнении запроса к VK API");
+				console.log(error);
+				
 				return {
 					error: error.error_code,
 					message: error.error_msg
 				};	
 			}
 
-			let profiles = response.data.response.profiles;
-			let groups = response.data.response.groups;
+			let profiles = result.response.profiles;
+			let groups = result.response.groups;
 
 			await Promise.all(users.map(async (user) => {
 				const profile = profiles.find((el: any) => el.id === user.id);
@@ -510,7 +515,7 @@ export class ChatController extends AbstractController
 					user.avatar = group.photo_50;
 					user.name = group.name;
 				}
-			}));			
+			}));
 		} catch(e) {
 			return e;
 		}
@@ -824,17 +829,12 @@ export class ChatController extends AbstractController
 
 	private async kickUser(chat: number, user: number): Promise<void>
 	{
-		
-		const messageUrl = `https://api.vk.com/method/messages.removeChatUser?chat_id=${chat-2000000000}&member_id=${user}&access_token=${App.vkToken}&v=5.199`;
-
-		try {
-			let response = await axios.get(messageUrl) 
-			if(response.data.error) {
-				const error = response.data.error;
-				throw new Error(`${error.error_code}: ${error.error_msg}`);
-			}
-		} catch(e) {
-			throw e;
+		const result = await VKAPI.kickUser({
+			chat_id: chat - 2000000000,
+			member_id: user
+		});
+		if(result.error) {
+			throw new Error(`${result.error.error_code}: ${result.error.error_msg}`);
 		}
 	}
 }
