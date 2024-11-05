@@ -1,5 +1,6 @@
 export enum CommandRights {
 	help = 'help',
 	settings = 'settings',
-	selfKick = 'quit'
+	selfKick = 'quit',
+	kick = 'kick'
 }

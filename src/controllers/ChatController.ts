@@ -794,6 +794,111 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
+		
+		try {
+			await VKAPI.sendMessage({
+				peer_id: chat,
+				message: `[Пользователь|id${user}] пожелал покинуть чат.`
+			});
+			await this.kickUser(chat, user);
+		} catch(e) {
+			next(e);
+			return;
+		}
+
+		let query = `
+			UPDATE users
+			SET
+				in_chat = 0,
+				invited_by = 0,
+				last_message = 0,
+				role = CASE
+					WHEN (SELECT unRoleAfterKick FROM settings WHERE chat_id = ?) = 1
+					THEN (SELECT inviterole FROM chats WHERE chat_id = ?)
+					ELSE role
+				END
+			WHERE user_id = ? AND chat_id = 
+		`;
+		query = this.buildChatQuery(query, type);
+		query += ' LIMIT 1';
+		
+
+		const [userInfo]: any = await this.db.query(query, [chat, chat, user, chat]);
+		if(!userInfo) {
+			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
+			return;
+		}
+
+		res.json(true);
+	}
+
+	private validateKick(req: Request) {
+		const schema = Joi.object({
+            chat: Joi.alternatives().try(
+                Joi.number().integer().min(2000000001),
+                Joi.string().min(3)
+            ).required(),
+            type: Joi.string().valid('peer_id', 'uid').required(),
+        	punisher: Joi.number().integer().min(1).max(2000000000).required(),
+			user: Joi.number().integer().min(1).max(2000000000).required(),
+            reason: Joi.string(),
+        });
+
+        const { error, value } = schema.validate({ 
+            chat: req.params.id, 
+            type: req.body.type,
+			user: req.body.user,
+			punisher: req.body.punisher,
+			reason: req.body.reason
+        });
+
+        if (error) {
+            return { error: error.details[0].message };
+        }
+
+        return { value };
+    }
+	
+	public async kick(req: Request, res: Response, next: NextFunction) {
+		const validationResult = this.validateKick(req);
+
+        if (validationResult.error) {
+			next(new Errors.ParamsValidationError(validationResult.error));
+			return;
+        }
+
+        let { chat, user, punisher, reason, type } = validationResult.value;
+
+		try {
+			if(!(await this.checkMemberRight(punisher, chat, type, CommandRights.kick))) {
+				next(new Errors.NoPermissions());	
+				return;
+			}
+		} catch(e) {
+			next(e);
+			return;
+		}
+
+
+		if(type === "uid") {
+			let query = `
+				SELECT 
+					chat_id
+				FROM users
+				WHERE user_id = ? AND chat_id = 
+			`;
+			query = this.buildChatQuery(query, type);
+			query += ' LIMIT 1';
+			
+
+			const [userInfo]: any = await this.db.query(query, [user, chat]);
+			if(!userInfo) {
+				next(new Errors.QueryError("Не удалось найти чат."));
+				return;
+			}
+			chat = userInfo.chat_id;
+		}
+		
 		try {
 			await this.kickUser(chat, user);
 		} catch(e) {
