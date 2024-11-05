@@ -50,6 +50,10 @@ export class VKAPI
 	{
 		return this.query<GetConversationMembersParams>('messages.getConversationMembers', args);
 	}
+	public static async sendMessage(args: SendMessageParams)
+	{
+		return this.query<VKSendMessageParams>('messages.send', {...args, random_id: (new Date()).getTime()});
+	}
 }
 
 interface RemoveUserParams
@@ -78,4 +82,14 @@ interface GetConversationMembersParams
 	extended?: 0|1;
 	fields?: string;
 	group_id?: number;
+}
+
+interface SendMessageParams
+{
+	peer_id: number;
+	message?: string;
+}
+interface VKSendMessageParams extends SendMessageParams
+{
+	random_id: number;
 }
