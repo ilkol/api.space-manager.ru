@@ -510,26 +510,7 @@ export class ChatController extends AbstractController
 					user.avatar = group.photo_50;
 					user.name = group.name;
 				}
-			}));
-
-			/* 
-			// Оставил старый код, мало ли вернуть захочу			
-			let reponse = response.data.response;
-			reponse.profiles.forEach((el: any) => {
-				const user = users.find(u => u.id === el.id);
-				if (user) {
-					user.avatar = el.photo_50;
-					user.name = `${el.first_name} ${el.last_name}`;
-				}
-			});
-			reponse.groups.forEach((el: any) => {
-				const user = users.find(u => u.id === -el.id);
-				if (user) {
-					user.avatar = el.photo_50;
-					user.name = el.name;
-				}
-			}); */
-			
+			}));			
 		} catch(e) {
 			return e;
 		}
@@ -741,6 +722,119 @@ export class ChatController extends AbstractController
 					LIMIT 1
 				)
 			`;
+		}
+	}
+
+
+	private validateLeave(req: Request) {
+		const schema = Joi.object({
+            chat: Joi.alternatives().try(
+                Joi.number().integer().min(2000000001),
+                Joi.string().min(3)
+            ).required(),
+            type: Joi.string().valid('peer_id', 'uid').required(),
+			user: Joi.number().integer().min(1).max(2000000000).required()
+        });
+
+        const { error, value } = schema.validate({ 
+            chat: req.params.id, 
+            type: req.body.type,
+			user: req.body.user
+        });
+
+        if (error) {
+            return { error: error.details[0].message };
+        }
+
+        return { value };
+    }
+		
+	public async leave(req: Request, res: Response, next: NextFunction) {
+		const validationResult = this.validateLeave(req);
+
+        if (validationResult.error) {
+			next(new Errors.ParamsValidationError(validationResult.error));
+			return;
+        }
+
+        let { chat, user, type } = validationResult.value;
+
+		try {
+			if(!(await this.checkMemberRight(user, chat, type, CommandRights.selfKick))) {
+				next(new Errors.NoPermissions());	
+				return;
+			}
+		} catch(e) {
+			next(e);
+			return;
+		}
+
+
+		if(type === "uid") {
+			let query = `
+				SELECT 
+					chat_id
+				FROM users
+				WHERE user_id = ? AND chat_id = 
+			`;
+			query = this.buildChatQuery(query, type);
+			query += ' LIMIT 1';
+			
+
+			const [userInfo]: any = await this.db.query(query, [user, chat]);
+			if(!userInfo) {
+				next(new Errors.QueryError("Не удалось найти чат."));
+				return;
+			}
+			chat = userInfo.chat_id;
+		}
+		
+		try {
+			await this.kickUser(chat, user);
+		} catch(e) {
+			next(e);
+			return;
+		}
+
+		let query = `
+			UPDATE users
+			SET
+				in_chat = 0,
+				invited_by = 0,
+				last_message = 0,
+				role = CASE
+					WHEN (SELECT unRoleAfterKick FROM settings WHERE chat_id = ?) = 1
+					THEN (SELECT inviterole FROM chats WHERE chat_id = ?)
+					ELSE role
+				END
+			WHERE user_id = ? AND chat_id = 
+		`;
+		query = this.buildChatQuery(query, type);
+		query += ' LIMIT 1';
+		
+
+		const [userInfo]: any = await this.db.query(query, [chat, chat, user, chat]);
+		if(!userInfo) {
+			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
+			return;
+		}
+
+		res.json(true);
+	}
+
+	private async kickUser(chat: number, user: number): Promise<void>
+	{
+		
+		const messageUrl = `https://api.vk.com/method/messages.removeChatUser?chat_id=${chat-2000000000}&member_id=${user}&access_token=${App.vkToken}&v=5.199`;
+
+		try {
+			let response = await axios.get(messageUrl) 
+			if(response.data.error) {
+				const error = response.data.error;
+				throw new Error(`${error.error_code}: ${error.error_msg}`);
+			}
+		} catch(e) {
+			throw e;
 		}
 	}
 }
