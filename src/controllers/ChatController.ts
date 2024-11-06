@@ -7,6 +7,7 @@ import axios from 'axios';
 import { CommandRights } from '../utils/CommandRights';
 import { Errors } from '../Exceptions';
 import { VKAPI } from '../VK/API';
+import { Logger, LogType } from '../Logger';
 
 interface defaultUserInfo
 {
@@ -794,7 +795,7 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
-		
+		Logger.log(chat, LogType.userLeave, { user });
 		try {
 			await VKAPI.sendMessage({
 				peer_id: chat,

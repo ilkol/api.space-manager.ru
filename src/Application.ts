@@ -9,6 +9,7 @@ import { AuthMiddleware } from './middleware/authtorization';
 import userRoutes from './routes/user';
 import chatRoutes from './routes/chat';
 import { ErrorMiddleware } from './middleware/ErrorCather';
+import { Logger } from './Logger';
 
 export class App
 {
@@ -27,6 +28,7 @@ export class App
 		App._vkToken = process.env.VK_TOKEN ?? "";
         this.app = express();
         this.db = this.createDBConnection(dbConfig);
+		Logger.init(this.db);
 
         this.middlewares();
         this.routes();
