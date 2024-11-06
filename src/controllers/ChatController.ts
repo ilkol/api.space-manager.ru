@@ -939,7 +939,10 @@ export class ChatController extends AbstractController
 			member_id: user
 		});
 		if(result.error) {
-			throw new Error(`${result.error.error_code}: ${result.error.error_msg}`);
+			if(result.error.error_code === 15) {
+				throw new Errors.VKAccessDenied();
+			}
+			throw new Error(`[${result.error.error_code}] ${result.error.error_msg}`);
 		}
 	}
 }

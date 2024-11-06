@@ -44,7 +44,7 @@ export class VKAPI
 	 */
 	public static async kickUser(args: RemoveUserParams)
 	{	
-		return this.query<RemoveUserParams>('messages.removeUser', args);
+		return this.query<RemoveUserParams>('messages.removeChatUser', args);
 	}
 	public static async getConversationMembers(args: GetConversationMembersParams)
 	{
