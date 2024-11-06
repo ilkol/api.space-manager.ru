@@ -164,7 +164,7 @@ export class ChatController extends AbstractController
 				'si_mats'
 			).required(),
 			value: Joi.bool().required(),
-			user_id: Joi.number().integer().min(1).max(2000000000).required()
+			user_id: Joi.number().integer().max(2000000000).required()
         });
 
         const { error, value } = schema.validate({ 
@@ -739,7 +739,7 @@ export class ChatController extends AbstractController
                 Joi.string().min(3)
             ).required(),
             type: Joi.string().valid('peer_id', 'uid').required(),
-			user: Joi.number().integer().min(1).max(2000000000).required()
+			user: Joi.number().integer().max(2000000000).required()
         });
 
         const { error, value } = schema.validate({ 
@@ -840,8 +840,8 @@ export class ChatController extends AbstractController
                 Joi.string().min(3)
             ).required(),
             type: Joi.string().valid('peer_id', 'uid').required(),
-        	punisher: Joi.number().integer().min(1).max(2000000000).required(),
-			user: Joi.number().integer().min(1).max(2000000000).required(),
+        	punisher: Joi.number().integer().max(2000000000).required(),
+			user: Joi.number().integer().max(2000000000).required(),
             reason: Joi.string(),
         });
 
