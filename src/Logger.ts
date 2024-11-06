@@ -8,18 +8,16 @@ export enum LogType {
 
 // Интерфейсы параметров для каждого типа сообщения
 interface LogMessageParams {
-    [LogType.userLeave]: { user: number; };
-    [LogType.kickUser]: { user: number; punisher: number; reason?: string};
-	// [LogType.kickUserReason]: { user: number; punisher: number; reason: string};
+    [LogType.userLeave]: { user: number; userName: string; };
+    [LogType.kickUser]: { user: number; userName: string; punisher: number; punisherName: string; reason?: string};
 }
 
 export class Logger
 {
 	private static instance: Logger;
 	private static readonly templates = {
-        [LogType.userLeave]: "[Пользователь|id{user}] покинул чат",
-        [LogType.kickUser]: "[Пользователь|id{punisher}] исключил [пользователя|id{user}] из чата",
-        // [LogType.kickUserReason]: "[Пользователь|id{punisher}] исключил [пользователя|id{user}] из чата. Причиниа: {reason}",
+        [LogType.userLeave]: "[id{user}|{userName}}] покинул чат",
+        [LogType.kickUser]: "[id{punisher}|{punisherName}] исключил [id{user}|{userName}] из чата",
     };
 
 	private constructor(private readonly db: DB) {

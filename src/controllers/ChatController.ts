@@ -787,7 +787,7 @@ export class ChatController extends AbstractController
 			query += ' LIMIT 1';
 			
 
-			const [userInfo]: any = await this.db.query(query, [user, chat]);
+			const userInfo: any = await this.db.query(query, [user, chat]);
 			if(!userInfo) {
 				next(new Errors.QueryError("Не удалось найти чат."));
 				return;
@@ -795,13 +795,13 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
-		Logger.log(chat, LogType.userLeave, { user });
+		Logger.log(chat, LogType.userLeave, { user, userName: 'Пользователь' });
 		try {
+			await this.kickUser(chat, user);
 			await VKAPI.sendMessage({
 				peer_id: chat,
-				message: `[Пользователь|id${user}] пожелал покинуть чат.`
+				message: `[id${user}|Пользователь] пожелал покинуть чат.`
 			});
-			await this.kickUser(chat, user);
 		} catch(e) {
 			next(e);
 			return;
@@ -902,7 +902,9 @@ export class ChatController extends AbstractController
 		
 		Logger.log(chat, LogType.kickUser, { 
 			user,
+			userName: "Пользователь",
 			punisher: punisher,
+			punisherName: "Пользователь",
 			reason: reason
 		});
 		try {
