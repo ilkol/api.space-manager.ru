@@ -900,6 +900,11 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
+		Logger.log(chat, LogType.kickUser, { 
+			user,
+			punisher: punisher,
+			reason: reason
+		});
 		try {
 			await this.kickUser(chat, user);
 		} catch(e) {
