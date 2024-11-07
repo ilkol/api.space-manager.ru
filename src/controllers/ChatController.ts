@@ -12,8 +12,8 @@ import { Phrases } from '../Phrases';
 
 export enum Sex {
 	club = 0,
-	male = 1,
-	female = 2
+	female = 1,
+	male = 2,
 }
 
 interface UserNameInfo
