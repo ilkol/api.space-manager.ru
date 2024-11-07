@@ -828,29 +828,6 @@ export class ChatController extends AbstractController
 			return;
 		}
 
-		let query = `
-			UPDATE users
-			SET
-				in_chat = 0,
-				invited_by = 0,
-				last_message = 0,
-				role = CASE
-					WHEN (SELECT unRoleAfterKick FROM settings WHERE chat_id = ?) = 1
-					THEN (SELECT inviterole FROM chats WHERE chat_id = ?)
-					ELSE role
-				END
-			WHERE user_id = ? AND chat_id = 
-		`;
-		query = this.buildChatQuery(query, type);
-		query += ' LIMIT 1';
-		
-
-		const userInfo: any = await this.db.query(query, [chat, chat, user, chat]);
-		if(!userInfo) {
-			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
-			return;
-		}
-
 		res.json(true);
 	}
 
@@ -942,6 +919,26 @@ export class ChatController extends AbstractController
 			return;
 		}
 
+		res.json(true);
+	}
+
+	private async kickUser(chat: number, user: number): Promise<void>
+	{	
+		const result = await VKAPI.kickUser({
+			chat_id: chat - 2000000000,
+			member_id: user
+		});
+		if(result.error) {
+			if(result.error.error_code === 15) {
+				throw new Errors.VKAccessDenied();
+			}
+			throw new Error(`[${result.error.error_code}] ${result.error.error_msg}`);
+		}
+		this.kickedUserUpdateInfo(chat, user);
+	}
+
+	private async kickedUserUpdateInfo(chat: number, user: number)
+	{
 		let query = `
 			UPDATE users
 			SET
@@ -953,32 +950,14 @@ export class ChatController extends AbstractController
 					THEN (SELECT inviterole FROM chats WHERE chat_id = ?)
 					ELSE role
 				END
-			WHERE user_id = ? AND chat_id = 
+			WHERE user_id = ? AND chat_id = ?
+			 LIMIT 1
 		`;
-		query = this.buildChatQuery(query, type);
-		query += ' LIMIT 1';
-		
-
+	
 		const userInfo: any = await this.db.query(query, [chat, chat, user, chat]);
+	
 		if(!userInfo) {
-			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
-			return;
-		}
-
-		res.json(true);
-	}
-
-	private async kickUser(chat: number, user: number): Promise<void>
-	{
-		const result = await VKAPI.kickUser({
-			chat_id: chat - 2000000000,
-			member_id: user
-		});
-		if(result.error) {
-			if(result.error.error_code === 15) {
-				throw new Errors.VKAccessDenied();
-			}
-			throw new Error(`[${result.error.error_code}] ${result.error.error_msg}`);
+			throw new Errors.QueryError("Не удалось обновить информацию о пользователе чата");
 		}
 	}
 
