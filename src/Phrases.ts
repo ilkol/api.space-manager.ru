@@ -48,7 +48,7 @@ const getGenderLabel = (gender: Sex): WordGender => {
  * @returns отформатированное упоминание
  */
 const formatMentionName = (user: number, name: string): string => {
-	return formatMentionLabel(user, user < 0 ? `Сообщество «${name}]»` : name);
+	return formatMentionLabel(user, user < 0 ? `Сообщество «${name}»` : name);
 }
 /**
  * Форматирование упоминание любым текстом
