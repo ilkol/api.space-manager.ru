@@ -1,6 +1,6 @@
 {
   "name": "api.space-manager.ru",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "API for VK Bot",
   "main": "/dist/index.js",
   "scripts": {
