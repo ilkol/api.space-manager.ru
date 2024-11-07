@@ -1,24 +1,21 @@
 import { DB } from "./DB";
 import { Errors } from "./Exceptions";
+import { Phrases, PhrasesList, PhrasesParams } from "./Phrases";
 
 export enum LogType {
-    userLeave,
-	kickUser,
+    userLeave = PhrasesList.userLeave,
+    kickUser = PhrasesList.kickUser,
+    banUser = PhrasesList.banUser,
 }
-
-// Интерфейсы параметров для каждого типа сообщения
-interface LogMessageParams {
-    [LogType.userLeave]: { user: number; userName: string; };
-    [LogType.kickUser]: { user: number; userName: string; punisher: number; punisherName: string; reason?: string};
-}
+type LogTypeToParams = {
+    [LogType.userLeave]: PhrasesParams[PhrasesList.userLeave];
+    [LogType.kickUser]: PhrasesParams[PhrasesList.kickUser];
+    [LogType.banUser]: PhrasesParams[PhrasesList.banUser];
+};
 
 export class Logger
 {
 	private static instance: Logger;
-	private static readonly templates = {
-        [LogType.userLeave]: "[id{user}|{userName}}] покинул чат",
-        [LogType.kickUser]: "[id{punisher}|{punisherName}] исключил [id{user}|{userName}] из чата",
-    };
 
 	private constructor(private readonly db: DB) {
 
@@ -31,10 +28,13 @@ export class Logger
 		}
 	}
 
-	public static async log<T extends LogType>(chat: number, type: T, params: LogMessageParams[T])
+	public static async log<T extends LogType>(chat: number, type: T, params: LogTypeToParams[T])
 	{
-		const template = Logger.templates[type];
-		const text = this.instance.formatMessage(("reason" in params && params.reason) ? (template + `. Причина: ${params.reason}`) : template, params);
+		const text = Phrases.f(type as unknown as PhrasesList, params);
+		Logger.logText(chat, text);
+	}
+	public static async logText(chat: number, text: string)
+	{
 		this.instance.makeLog(chat, text);
 	}
 
@@ -48,14 +48,9 @@ export class Logger
 		`;
 		
 
-		const result: any = await this.db.query(query, [chat, text, (new Date()).getTime()]);
+		const result: any = await this.db.query(query, [chat, text, Math.floor((new Date()).getTime() / 1000)]);
 		if(!result) {
 			throw new Errors.QueryError("");
 		}
 	}
-	private formatMessage(template: string, params: Record<string, any>): string {
-        return template.replace(/{(\w+)}/g, (_, key) => {
-            return params[key] !== undefined ? params[key] : `{${key}}`;
-        });
-    }
 }

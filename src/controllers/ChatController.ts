@@ -8,6 +8,22 @@ import { CommandRights } from '../utils/CommandRights';
 import { Errors } from '../Exceptions';
 import { VKAPI } from '../VK/API';
 import { Logger, LogType } from '../Logger';
+import { Phrases } from '../Phrases';
+
+export enum Sex {
+	club = 0,
+	male = 1,
+	female = 2
+}
+
+interface UserNameInfo
+{
+	id: number;
+	sex: Sex;
+	nom: string;
+	gen: string;
+	dat: string;
+}
 
 interface defaultUserInfo
 {
@@ -795,7 +811,11 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
-		Logger.log(chat, LogType.userLeave, { user, userName: 'Пользователь' });
+		const name = await this.getMemberNameInfo(user);
+		Logger.log(chat, LogType.userLeave, { 
+			user: Phrases.formatMentionName(user, name.nom),
+			gender: Phrases.getGenderLabel(name.sex),
+		});
 		try {
 			await this.kickUser(chat, user);
 			await VKAPI.sendMessage({
@@ -824,7 +844,7 @@ export class ChatController extends AbstractController
 		query += ' LIMIT 1';
 		
 
-		const [userInfo]: any = await this.db.query(query, [chat, chat, user, chat]);
+		const userInfo: any = await this.db.query(query, [chat, chat, user, chat]);
 		if(!userInfo) {
 			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
 			return;
@@ -900,15 +920,22 @@ export class ChatController extends AbstractController
 			chat = userInfo.chat_id;
 		}
 		
-		Logger.log(chat, LogType.kickUser, { 
-			user,
-			userName: "Пользователь",
-			punisher: punisher,
-			punisherName: "Пользователь",
+		const name = await this.getMemberNameInfo(user);
+		const panisherName = await this.getMemberNameInfo(punisher);
+		const logText = Phrases.f(Phrases.List.kickUser, { 
+			user: Phrases.formatMentionName(user, name.nom),
+			punisher: Phrases.formatMentionName(punisher, panisherName.gen),
+			gender: Phrases.getGenderLabel(panisherName.sex),
 			reason: reason
-		});
+		})
+		Logger.logText(chat, logText);
+
 		try {
 			await this.kickUser(chat, user);
+			await VKAPI.sendMessage({
+				peer_id: chat,
+				message: logText
+			});
 		} catch(e) {
 			next(e);
 			return;
@@ -953,4 +980,30 @@ export class ChatController extends AbstractController
 			throw new Error(`[${result.error.error_code}] ${result.error.error_msg}`);
 		}
 	}
+
+	private async getMemberNameInfo(user: number): Promise<UserNameInfo> {
+        let query: string = `
+			SELECT 
+				*
+			FROM names
+			WHERE user_id = ?
+			LIMIT 1
+		`;
+
+		const [result]: any = await this.db.query(query, [user]);
+
+		if(!result) {
+			throw new Errors.QueryError();
+		}
+
+		const isClub = user < 0;
+
+		return {
+			id: user,
+			sex: result.sex,
+			nom: result.name,
+			gen: isClub ? result.name : result.nameGen,
+			dat: isClub ? result.name :  result.nameDat,
+		}
+    }
 }
