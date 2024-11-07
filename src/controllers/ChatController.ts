@@ -23,6 +23,7 @@ interface UserNameInfo
 	nom: string;
 	gen: string;
 	dat: string;
+	acc: string;
 }
 
 interface defaultUserInfo
@@ -923,8 +924,8 @@ export class ChatController extends AbstractController
 		const name = await this.getMemberNameInfo(user);
 		const panisherName = await this.getMemberNameInfo(punisher);
 		const logText = Phrases.f(Phrases.List.kickUser, { 
-			user: Phrases.formatMentionName(user, name.nom),
-			punisher: Phrases.formatMentionName(punisher, panisherName.gen),
+			user: Phrases.formatMentionName(user, name.acc),
+			punisher: Phrases.formatMentionName(punisher, panisherName.nom),
 			gender: Phrases.getGenderLabel(panisherName.sex),
 			reason: reason
 		})
@@ -958,7 +959,7 @@ export class ChatController extends AbstractController
 		query += ' LIMIT 1';
 		
 
-		const [userInfo]: any = await this.db.query(query, [chat, chat, user, chat]);
+		const userInfo: any = await this.db.query(query, [chat, chat, user, chat]);
 		if(!userInfo) {
 			next(new Errors.QueryError("Не удалось обновить информацию о пользователе чата"));
 			return;
@@ -996,14 +997,26 @@ export class ChatController extends AbstractController
 			throw new Errors.QueryError();
 		}
 
-		const isClub = user < 0;
+		if( user < 0) {
+			return {
+				id: user,
+				sex: result.sex,
+				nom: result.name,
+				gen: result.nameDat,
+				dat: result.name,
+				acc: result.name,
+			}
 
-		return {
-			id: user,
-			sex: result.sex,
-			nom: result.name,
-			gen: isClub ? result.name : result.nameGen,
-			dat: isClub ? result.name :  result.nameDat,
+		}
+		else {
+			return {
+				id: user,
+				sex: result.sex,
+				nom: result.name,
+				gen: result.nameGen,
+				dat: result.nameDat,
+				acc: result.nameAcc,
+			}
 		}
     }
 }
