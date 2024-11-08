@@ -640,14 +640,15 @@ export class ChatController extends AbstractController
 	{
 		let query: string = `
 			SELECT 
-				${setting}
-			FROM commands c
-			WHERE c.chat_id = 
+				a.*,
+			FROM commandsAccess a
+			LEFT JOIN commands c ON c.id = a.command
+			WHERE name = ? AND a.chat_id = 
 		`;
 		query = this.buildChatQuery(query, chatIDType);
-		query += ' LIMIT 1';
+		query += ' LIMIT !';
 
-		const [result]: any = await this.db.query(query, [chat]);
+		const [result]: any = await this.db.query(query, [setting, chat]);
 
 		if(!result) {
 			throw new Errors.QueryError('Не найдены права для этого чата');
@@ -686,17 +687,22 @@ export class ChatController extends AbstractController
 		
 		let query: string = `
 			SELECT 
-				c.*
-			FROM commands c
-			WHERE c.chat_id = 
+				a.*,
+				c.name
+			FROM commandsAccess a
+			LEFT JOIN commands c ON c.id = a.command
+			WHERE a.chat_id = 
 		`;
 		query = this.buildChatQuery(query, type);
-		query += ' LIMIT 1';
 		
 
-        const [commandsAccess]: any = await this.db.query(query, [chat]);
+        const commandsAccess: any = await this.db.query(query, [chat]);
 
 		if(!commandsAccess) {
+			next(new Errors.QueryError());
+			return;
+		}
+		if(commandsAccess.length === 0) {
 			next(new Errors.QueryError("Не найдены права на использование команд в чате."));
 			return;
 		}
@@ -711,11 +717,12 @@ export class ChatController extends AbstractController
 		query += ' LIMIT 1';
 		
 
-        const [userInfo]: any = await this.db.query(query, [user, chat]);
-		if(!userInfo) {
+        const userInfoRes: any = await this.db.query(query, [user, chat]);
+		if(!userInfoRes) {
 			next(new Errors.QueryError("Не найдены данные об участнике чата"));
 			return;
 		}
+		const [userInfo] = userInfoRes;
 		
 		const result: { user_id: number; chat_id: number; [key: string]: any } = {
 			user_id: user,
@@ -723,12 +730,17 @@ export class ChatController extends AbstractController
 		};
 
 		const role = userInfo.role;
-		for (const key in commandsAccess) {
-			if(key === 'id' || key === 'chat_id') continue;
-			const value = commandsAccess[key as keyof typeof commandsAccess];
-			const [minRole, additionalParam1, additionalParam2] = value.split('|').map(Number);
-			result[key] = role >= minRole;
-		}
+		commandsAccess.forEach((element: {chat_id: number, command: number, role: number, limitTime: number, limitCount: number, name: string}) => {
+			const cmd = element.name;
+			result[cmd] = role >= element.role;
+			
+		});
+ 		// for (const key in commandsAccess) {
+		// 	if(key === 'id' || key === 'chat_id') continue;
+		// 	const value = commandsAccess[key as keyof typeof commandsAccess];
+		// 	const [minRole, additionalParam1, additionalParam2] = value.split('|').map(Number);
+		// 	result[key] = role >= minRole;
+		// }
 
 		res.json(result);
     }
