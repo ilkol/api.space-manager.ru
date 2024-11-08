@@ -735,12 +735,6 @@ export class ChatController extends AbstractController
 			result[cmd] = role >= element.role;
 			
 		});
- 		// for (const key in commandsAccess) {
-		// 	if(key === 'id' || key === 'chat_id') continue;
-		// 	const value = commandsAccess[key as keyof typeof commandsAccess];
-		// 	const [minRole, additionalParam1, additionalParam2] = value.split('|').map(Number);
-		// 	result[key] = role >= minRole;
-		// }
 
 		res.json(result);
     }
