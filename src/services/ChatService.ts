@@ -102,7 +102,7 @@ export class ChatService extends Service {
 		return info;
 
 	}
-	public async getRoles(chat: string, type: string) {
+	public async getRoles({chat, type}: {chat: string, type: string}) {
 		
 		const roles = await this.chatRepo.getRoles(chat, type);
 		defaultRolesName.forEach((name, level) => {
@@ -126,13 +126,13 @@ export class ChatService extends Service {
 		
 		await this.chatRepo.setSetting(chat, type, setting, value);		
 	}
-	public async getSettings(chat: string, type: string)
+	public async getSettings({chat, type}: {chat: string, type: string})
 	{
 		const results = await this.chatRepo.getSettings(chat, type);
 		return results;
 	}
 
-	public async getBannedUsers(chat: string, type: string) {
+	public async getBannedUsers({chat, type}: {chat: string, type: string}) {
 		const bannedUser = await this.chatRepo.getBannedUsers(chat, type);
 		
 		const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;		
@@ -142,7 +142,7 @@ export class ChatService extends Service {
 		}
 		return bannedUser;
 	}
-	public async getMembers(chat: string, type: string)
+	public async getMembers({chat, type}: {chat: string, type: string})
 	{
 		const usersArray = await this.chatRepo.getMembers(chat, type);
 		const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;		
@@ -155,7 +155,7 @@ export class ChatService extends Service {
 		usersArray.map(checkDefaultRole);
 		return usersArray;
 	}
-	public async getInfo(chat: string, type: string)
+	public async getInfo({chat, type}: any)
 	{
 		return await this.chatRepo.getInfo(chat, type);
 	}

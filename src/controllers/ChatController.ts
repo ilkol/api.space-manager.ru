@@ -11,9 +11,24 @@ export class ChatController extends AbstractController
         super();
     }
 
-	private validateInfo(req: Request) {
-		const schema = Joi.object({
-            id: Joi.alternatives().try(
+	private async handleRequest(schema: Joi.ObjectSchema, serviceMethod: Function, params: Object, res: Response, next: NextFunction)
+	{
+		try {
+			const { error, value } = schema.validate(params);
+			if (error) {
+				next(new Errors.ParamsValidationError(error.details[0].message));
+				return;
+			}			
+			const results = await serviceMethod(value);
+			res.json(results);
+		} catch(e) {
+			next(e);
+		}
+	}
+
+	private validateInfo() {
+		return Joi.object({
+            chat: Joi.alternatives().try(
                 Joi.number().integer().min(2000000001).messages({
 					'number.base': 'ID должно быть числом.',
 					'number.integer': 'ID должно быть целым числом.',
@@ -33,21 +48,10 @@ export class ChatController extends AbstractController
 				'any.required': 'Type обязательный параметр.'
 			})
         });
-
-        const { error, value } = schema.validate({ 
-            id: req.params.id, 
-            type: req.query.type 
-        });
-
-        if (error) {
-            return { error: error.details[0].message };
-        }
-
-        return { value };
     }
-	private validateSetSettings(req: Request) {
-		const schema = Joi.object({
-            id: Joi.alternatives().try(
+	private validateSetSettings() {
+		return Joi.object({
+            chat: Joi.alternatives().try(
                 Joi.number().integer().min(2000000001),
                 Joi.string().min(3)
             ).required(),
@@ -77,133 +81,44 @@ export class ChatController extends AbstractController
 			value: Joi.bool().required(),
 			user_id: Joi.number().integer().max(2000000000).required()
         });
+    }
 
-        const { error, value } = schema.validate({ 
+	private async needOnlyChatIDMethod(method: Function, req: Request, res: Response, next: NextFunction)
+	{
+		await this.handleRequest(this.validateInfo(), method.bind(this.service), { 
+            chat: req.params.id, 
+            type: req.query.type 
+        }, res, next);
+	}
+	
+	public async getInfo(req: Request, res: Response, next: NextFunction) {
+		await this.needOnlyChatIDMethod(this.service.getInfo, req, res, next);
+    }
+
+	public async getMembers(req: Request, res: Response, next: NextFunction) {
+		await this.needOnlyChatIDMethod(this.service.getMembers, req, res, next);
+    }
+
+	public async getBannedUsers(req: Request, res: Response, next: NextFunction) {
+		await this.needOnlyChatIDMethod(this.service.getBannedUsers, req, res, next);
+    }
+	public async getSettings(req: Request, res: Response, next: NextFunction) {
+		await this.needOnlyChatIDMethod(this.service.getSettings, req, res, next);
+    }
+	public async setSetting(req: Request, res: Response, next: NextFunction) {
+		await this.handleRequest(this.validateSetSettings(), this.service.setSetting.bind(this.service), { 
             id: req.params.id, 
             type: req.body.type,
 			setting: req.body.setting,
 			value: req.body.value,
 			user_id: req.body.user_id
-        });
-
-        if (error) {
-            return { error: error.details[0].message };
-        }
-
-        return { value };
-    }
-	
-
-	public async getInfo(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateInfo(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        const { id, type } = validationResult.value;
-
-		try {
-			const results = await this.service.getInfo(id, type);
-			res.json(results);
-		} catch(e) {
-			next(e);
-		}
-    }
-
-	public async getMembers(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateInfo(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { id, type } = validationResult.value;
-		
-		try {
-			const results = await this.service.getMembers(id, type);
-			res.json(results);
-		} catch(e) {
-			next(e);
-		}
-    }
-
-	public async getBannedUsers(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateInfo(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { id, type } = validationResult.value;
-		
-		try {
-			const results = await this.service.getBannedUsers(id, type);
-			res.json(results);
-		} catch(e) {
-			next(e);
-		}
-		
-    }
-	public async getSettings(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateInfo(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { id, type } = validationResult.value;
-		
-		try {
-			const results = await this.service.getSettings(id, type);
-			res.json(results);
-		} catch(e) {
-			next(e);
-		}
-		
-    }
-	public async setSetting(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateSetSettings(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { id, type, setting, value, user_id } = validationResult.value;
-		
-		try {
-			await this.service.setSetting(id, type, setting, value, user_id);
-			res.json(true);
-		} catch(e) {
-			next(e);
-		}
-		
+        }, res, next);
     }
 	public async getRoles(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateInfo(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { id, type } = validationResult.value;
-		
-		try {
-			const result = await this.service.getRoles(id, type);
-			res.json(result);
-		}
-		catch(e) {
-			next(e);
-		}		
+		await this.needOnlyChatIDMethod(this.service.getRoles, req, res, next);
     }
-	private validateMemberStats(req: Request) {
-		const schema = Joi.object({
+	private validateMemberStats() {
+		return Joi.object({
             chat: Joi.alternatives().try(
 				Joi.number().integer().min(2000000001).message("Chat ID should be a number starting from 2000000001"),
 				Joi.string().min(3).message("Chat ID should be a string with at least 3 characters")
@@ -218,118 +133,41 @@ export class ChatController extends AbstractController
 				'any.required': 'user ID is required'
 			})
         });
-	
-		const { error, value } = schema.validate({ 
+    }
+
+	private async needMemberInfo(method: Function, req: Request, res: Response, next: NextFunction)
+	{
+		await this.handleRequest(this.validateMemberStats(), method.bind(this.service), { 
 			chat: req.params.chat, 
 			user: req.params.user, 
 			type: req.query.type 
-		});
-	
-		if (error) {
-			console.error("Validation error:", error.details[0].message);
-			return { error: error.details[0].message };
-		}
-	
-		return { value };
-    }
+		}, res, next);
+	}
 
 	public async getMemberStats(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateMemberStats(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { chat, user, type } = validationResult.value;
-		
-		
-		try {
-			const result = await this.service.getMemberStats(chat, user, type);
-			res.json(result);
-		} catch(e) {
-			next(e);
-		}
+		await this.needMemberInfo(this.service.getMemberStats, req, res, next);
     }
 
 	public async getMemberRights(req: Request, res: Response, next: NextFunction) {
-        const validationResult = this.validateMemberStats(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { chat, user, type } = validationResult.value;
-		
-		try {
-			const result = await this.service.getMemberRights(chat, user, type);	
-			res.json(result);
-		} catch(e) {
-			next(e);
-		}
-
-    }
-
-	private buildChatQuery(baseQuery: string, type: string): string {
-		if (type === "peer_id") {
-			return baseQuery + "?";
-		} else {
-			return baseQuery + `
-				(
-					SELECT chat_id
-					FROM chats
-					WHERE chat_uid = ?
-					LIMIT 1
-				)
-			`;
-		}
-	}
-
-
-	private validateLeave(req: Request) {
-		const schema = Joi.object({
-            chat: Joi.alternatives().try(
-                Joi.number().integer().min(2000000001),
-                Joi.string().min(3)
-            ).required(),
-            type: Joi.string().valid('peer_id', 'uid').required(),
-			user: Joi.number().integer().max(2000000000).required()
-        });
-
-        const { error, value } = schema.validate({ 
-            chat: req.params.id, 
-            type: req.body.type,
-			user: req.body.user
-        });
-
-        if (error) {
-            return { error: error.details[0].message };
-        }
-
-        return { value };
+		await this.needMemberInfo(this.service.getMemberRights, req, res, next);
     }
 		
 	public async leave(req: Request, res: Response, next: NextFunction) {
-		const validationResult = this.validateLeave(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { chat, user, type } = validationResult.value;
-
-		try {
-			await this.service.leaveChat(chat, user, type);
-			res.json(true);
-		} catch(e) {
-			next(e);
-		}
+		await this.needMemberInfo(this.service.leaveChat, req, res, next);
 	}
 
-	private validateKick(req: Request) {
-		const schema = Joi.object({
+	private async needPunisher(method: Function, req: Request, res: Response, next: NextFunction) {
+		await this.handleRequest(this.validateKick(), method.bind(this.service), { 
+            chat: req.params.id, 
+            type: req.body.type,
+			user: req.body.user,
+			punisher: req.body.punisher,
+			reason: req.body.reason
+        }, res, next);
+	}
+
+	private validateKick() {
+		return Joi.object({
             chat: Joi.alternatives().try(
                 Joi.number().integer().min(2000000001),
                 Joi.string().min(3)
@@ -339,39 +177,10 @@ export class ChatController extends AbstractController
 			user: Joi.number().integer().max(2000000000).required(),
             reason: Joi.string(),
         });
-
-        const { error, value } = schema.validate({ 
-            chat: req.params.id, 
-            type: req.body.type,
-			user: req.body.user,
-			punisher: req.body.punisher,
-			reason: req.body.reason
-        });
-
-        if (error) {
-            return { error: error.details[0].message };
-        }
-
-        return { value };
     }
 	
 	public async kick(req: Request, res: Response, next: NextFunction) {
-		const validationResult = this.validateKick(req);
-
-        if (validationResult.error) {
-			next(new Errors.ParamsValidationError(validationResult.error));
-			return;
-        }
-
-        let { chat, user, punisher, reason, type } = validationResult.value;
-
-		try {
-			await this.service.kickMember(chat, user, punisher, reason, type);
-			res.json(true);
-		} catch(e) {
-			next(e);
-		}
-
+		await this.needPunisher(this.service.kickMember, req, res, next);
 	}
 
 }
