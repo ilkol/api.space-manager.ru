@@ -77,19 +77,20 @@ export class ChatRepository extends Repository
 			FROM commandsAccess a
 			LEFT JOIN commands c ON c.id = a.command
 			JOIN users u ON u.chat_id = a.chat_id AND u.user_id = ?
-			WHERE c.name = ? AND a.chat_id = 
+			WHERE c.name = '${setting}' AND a.chat_id = 
 		`;
 		query = this.buildChatQuery(query, chatIDType);
 		query += ' LIMIT 1';
 	
-		const [result]: any = await this.db.query(query, [user, setting, chat]);
+		const [result]: any = await this.db.query(query, [user, chat]);
 	
 		if (!result) {
 			throw new Errors.QueryError('Не найдены права или информация о пользователе для этого чата');
 		}
 	
-		const value = result[setting];
-		const [minRole] = value.split('|').map(Number);
+		console.log(result);
+		// const value = result[setting];
+		const minRole = result.role;
 	
 		return result.role >= minRole;
 	}
@@ -127,12 +128,12 @@ export class ChatRepository extends Repository
 		let query: string = `
 			UPDATE settings
 			SET 
-				? = ?
+				${setting} = ?
 			WHERE chat_id =
 		`;
 		query = this.buildChatQuery(query, type);
 		
-        const results = await this.db.query(query, [setting, (value ? 1 : 0), chat]);
+        const results = await this.db.query(query, [(value ? 1 : 0), chat]);
 		if(!results) {
 			throw new Errors.QueryError("Не удалось изменить настройки");
 		}

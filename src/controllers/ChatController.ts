@@ -79,7 +79,7 @@ export class ChatController extends AbstractController
 				'si_mats'
 			).required(),
 			value: Joi.bool().required(),
-			user_id: Joi.number().integer().max(2000000000).required()
+			user: Joi.number().integer().max(2000000000).required()
         });
     }
 
@@ -107,11 +107,11 @@ export class ChatController extends AbstractController
     }
 	public async setSetting(req: Request, res: Response, next: NextFunction) {
 		await this.handleRequest(this.validateSetSettings(), this.service.setSetting.bind(this.service), { 
-            id: req.params.id, 
+            chat: req.params.id, 
             type: req.body.type,
 			setting: req.body.setting,
 			value: req.body.value,
-			user_id: req.body.user_id
+			user: req.body.user_id
         }, res, next);
     }
 	public async getRoles(req: Request, res: Response, next: NextFunction) {

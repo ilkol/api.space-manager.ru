@@ -28,7 +28,7 @@ export class ChatService extends Service {
 		super();
 	}
 
-	public async leaveChat(chat: string, user: number, type: string) {
+	public async leaveChat({chat, user, type}: {chat: string, user: number, type: string}) {
         const hasRight = await this.chatRepo.checkMemberRight(user, chat, type, CommandRights.selfKick);
         if (!hasRight) {
             throw new Errors.NoPermissions();
@@ -45,7 +45,7 @@ export class ChatService extends Service {
         return true;
     }
 
-    public async kickMember(chat: string, user: number, punisher: number, reason: string, type: string) {
+    public async kickMember({chat, user, punisher, reason, type}: {chat: string, user: number, punisher: number, reason: string, type: string}) {
         const hasRight = await this.chatRepo.checkMemberRight(punisher, chat, type, CommandRights.kick);
         if (!hasRight) {
             throw new Errors.NoPermissions();
@@ -63,7 +63,7 @@ export class ChatService extends Service {
 
         return true;
     }
-	public async getMemberRights(chat: string, user: number, type: string) {
+	public async getMemberRights({chat, user, type}: {chat: string, user: number, type: string}) {
         const commandsAccess = await this.chatRepo.getChatCommandAccess(chat, type);
 		const userInfo = await this.chatRepo.getMemberRole(chat, user, type);
 
@@ -82,7 +82,7 @@ export class ChatService extends Service {
 
 		return result;
     }
-	public async getMemberStats(chat: string, user: number, type: string)
+	public async getMemberStats({chat, user, type}: {chat: string, user: number, type: string})
 	{
 		
 		
@@ -117,7 +117,7 @@ export class ChatService extends Service {
 		
 		return Array.from(roles.values()).sort((a, b) => b.level - a.level);
 	}
-	public async setSetting(chat: string, type: string, setting: string, value: boolean, user: number)
+	public async setSetting({chat, type, setting, value, user}: {chat: string, type: string, setting: string, value: boolean, user: number})
 	{
 		const hasRight = await this.chatRepo.checkMemberRight(user, chat, type, CommandRights.settings);
         if (!hasRight) {
@@ -125,6 +125,7 @@ export class ChatService extends Service {
         }
 		
 		await this.chatRepo.setSetting(chat, type, setting, value);		
+		return true;
 	}
 	public async getSettings({chat, type}: {chat: string, type: string})
 	{
@@ -155,7 +156,7 @@ export class ChatService extends Service {
 		usersArray.map(checkDefaultRole);
 		return usersArray;
 	}
-	public async getInfo({chat, type}: any)
+	public async getInfo({chat, type}: {chat: string, type: string})
 	{
 		return await this.chatRepo.getInfo(chat, type);
 	}
