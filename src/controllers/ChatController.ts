@@ -186,11 +186,16 @@ export class ChatController extends AbstractController
 }
 
 export type Args<M extends keyof API> = Argsa[M];
+export type Returns<M extends keyof API> = ReturnsArray[M];
 
 type Params<M extends keyof API> = Parameters<API[M]>;
+type Return<M extends keyof API> = ReturnType<API[M]>;
 
 type Argsa = {
 	[M in keyof API]: Params<M>[0] extends undefined ? {} : NonNullable<Params<M>[0]>;
+}	
+type ReturnsArray = {
+	[M in keyof API]: Return<M> extends undefined ? {} : NonNullable<Return<M>>;
 }	
 
 export type AvatarURL = string;
