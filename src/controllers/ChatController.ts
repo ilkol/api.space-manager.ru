@@ -1,16 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
-import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
 import Joi from 'joi';
-import { CommandRights } from '../utils/CommandRights';
 import { Errors } from '../Exceptions';
-import { VKAPI } from '../VK/API';
-import { Logger, LogType } from '../Logger';
-import { Phrases } from '../Phrases';
 import { ChatService } from '../services/ChatService';
-
-
-
 
 export class ChatController extends AbstractController
 {
