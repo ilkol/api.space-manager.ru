@@ -28,7 +28,7 @@ export interface ChatMember
 	last_message_ids: string;
 	muteinfo: string;
 	// mats: number;
-	immunity: number;
+	immunity: number | null;
 	invited_by: number;
 }
 

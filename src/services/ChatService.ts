@@ -2,7 +2,7 @@ import { Args, Returns } from "../controllers/ChatController";
 import { Errors } from "../Exceptions";
 import { Logger, LogType } from "../Logger";
 import { Phrases } from "../Phrases";
-import { ChatRepository, defaultUserInfo, UserInfo } from "../repositories/ChatRepository";
+import { ChatMember, ChatRepository, defaultUserInfo, UserInfo } from "../repositories/ChatRepository";
 import { UserRepository } from "../repositories/UserRepository";
 import { CommandRights } from "../utils/CommandRights";
 import { VKAPI } from "../VK/API";
@@ -47,6 +47,10 @@ export class ChatService extends Service {
         if (!hasRight) {
             throw new Errors.NoPermissions();
         }
+		const userInfo = await this.chatRepo.getMember(chat, user, type);
+		const punisherInfo = await this.chatRepo.getMember(chat, punisher, type);
+		this.checkCanPunish(userInfo, punisherInfo);
+
 
         const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;
         await this.chatRepo.kickUser(chatId, user);
@@ -297,5 +301,14 @@ export class ChatService extends Service {
 			formattedName: Phrases.formatMentionName(userId, name.nom),
 			genderLabel: Phrases.getGenderLabel(name.sex),
 		};
+	}
+	private checkCanPunish(user: ChatMember, punisher: ChatMember): void
+	{
+		if(punisher.role < user.role) {
+			throw new Errors.NeedHigherRole();
+		}
+		if(user.immunity !== null && user.immunity >= punisher.role) {
+			throw new Errors.HaveImmunity();
+		}
 	}
 }
