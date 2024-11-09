@@ -86,7 +86,7 @@ export class ChatController extends AbstractController
 	private async needOnlyChatIDMethod(method: Function, req: Request, res: Response, next: NextFunction)
 	{
 		await this.handleRequest(this.validateInfo(), method.bind(this.service), { 
-            chat: req.params.id, 
+            chat: req.params.chat, 
             type: req.query.type 
         }, res, next);
 	}
@@ -107,7 +107,7 @@ export class ChatController extends AbstractController
     }
 	public async setSetting(req: Request, res: Response, next: NextFunction) {
 		await this.handleRequest(this.validateSetSettings(), this.service.setSetting.bind(this.service), { 
-            chat: req.params.id, 
+            chat: req.params.chat, 
             type: req.body.type,
 			setting: req.body.setting,
 			value: req.body.value,
@@ -162,7 +162,7 @@ export class ChatController extends AbstractController
 
 	private async needPunisher(method: Function, req: Request, res: Response, next: NextFunction) {
 		await this.handleRequest(this.validateKick(), method.bind(this.service), { 
-            chat: req.params.id, 
+            chat: req.params.chat, 
             type: req.body.type,
 			user: req.body.user,
 			punisher: req.body.punisher,

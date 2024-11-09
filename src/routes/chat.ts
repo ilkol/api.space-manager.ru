@@ -27,14 +27,14 @@ export default (chatService: ChatService) => {
     const controller = new ChatController(chatService);
     
     const routes: Route[] = [
-        route('/:id/getInfo', controller.getInfo.bind(controller)),
-		route('/:id/getMembers', controller.getMembers.bind(controller)),
-		route('/:id/getBannedUsers', controller.getBannedUsers.bind(controller)),
+        route('/:chat/getInfo', controller.getInfo.bind(controller)),
+		route('/:chat/getMembers', controller.getMembers.bind(controller)),
+		route('/:chat/getBannedUsers', controller.getBannedUsers.bind(controller)),
 
-		route('/:id/getSettings', controller.getSettings.bind(controller)),
-		route('/:id/setSetting', controller.setSetting.bind(controller), Method.post),
+		route('/:chat/getSettings', controller.getSettings.bind(controller)),
+		route('/:chat/setSetting', controller.setSetting.bind(controller), Method.post),
 
-		route('/:id/getRoles', controller.getRoles.bind(controller)),
+		route('/:chat/getRoles', controller.getRoles.bind(controller)),
 		route('/:chat/leave', controller.leave.bind(controller), Method.post),
 		route('/:chat/kick', controller.kick.bind(controller), Method.post),
 		
