@@ -2,6 +2,7 @@ import { Repository } from "./Repository";
 import { CommandRights } from '../utils/CommandRights';
 import { Errors } from "../Exceptions";
 import { VKAPI } from "../VK/API";
+import { Returns } from "../controllers/ChatController";
 
 export interface defaultUserInfo
 {
@@ -213,7 +214,7 @@ export class ChatRepository extends Repository
 		const usersArray: UserInfo[] = results.map(user);
 		return usersArray;
 	}
-	public async getInfo(chat: string|number, type: string)
+	public async getInfo(chat: string|number, type: string): Promise<Returns<'getInfo'>>
 	{
 		let query: string;
 		if(type === "peer_id") {
