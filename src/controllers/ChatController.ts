@@ -153,7 +153,11 @@ export class ChatController extends AbstractController
     }
 		
 	public async leave(req: Request, res: Response, next: NextFunction) {
-		await this.needMemberInfo(this.service.leaveChat, req, res, next);
+		await this.handleRequest(this.validateMemberStats(), this.service.leaveChat.bind(this.service), { 
+			chat: req.params.chat, 
+			user: req.body.user, 
+			type: req.body.type 
+		}, res, next);
 	}
 
 	private async needPunisher(method: Function, req: Request, res: Response, next: NextFunction) {

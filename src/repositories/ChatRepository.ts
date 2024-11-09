@@ -321,7 +321,7 @@ export class ChatRepository extends Repository
 			WHERE user_id = ? AND chat_id = ? LIMIT 1
 		`;
 	
-		const [result]: any = await this.db.query(query, [chat, chat, user, chat]);
+		const result: any = await this.db.query(query, [chat, chat, user, chat]);
 	
 		if (result.affectedRows === 0) {
 			throw new Errors.QueryError("Не удалось обновить информацию о пользователе чата");
@@ -428,5 +428,22 @@ export class ChatRepository extends Repository
 		}
 		const [userInfo] = userInfoRes;
 		return userInfo;
+	}
+	public async getUserNick(chat: number, user: number): Promise<string> {
+		let query = `
+			SELECT 
+				nick
+			FROM nicks
+			WHERE user_id = ? AND chat_id = ?
+			LIMIT 1
+		`;
+		
+
+        const userInfoRes: any = await this.db.query(query, [user, chat]);
+		if(!userInfoRes) {
+			throw new Errors.QueryError("Не найдены данные об участнике чата");
+		}
+		const [userInfo] = userInfoRes;
+		return userInfo.nick;
 	}
 }

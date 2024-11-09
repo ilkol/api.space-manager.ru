@@ -36,12 +36,8 @@ export class ChatService extends Service {
         }
 
         const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;
+		await this.chatRepo.kickUser(chatId, user);
         await this.logLeaveEvent(chatId, user);
-        
-        await VKAPI.sendMessage({
-            peer_id: chatId,
-            message: `[id${user}|Пользователь] пожелал покинуть чат.`,
-        });
 
         return true;
     }
@@ -208,6 +204,17 @@ export class ChatService extends Service {
 			user:userInfo.formattedName,
 			gender: userInfo.genderLabel,
 		});
+
+		const nick = await this.chatRepo.getUserNick(chat, user);
+		const logText = Phrases.f(Phrases.List.userLeave, {
+			user: Phrases.formatMentionName(user, nick),
+			gender: userInfo.genderLabel,
+		})
+
+		VKAPI.sendMessage({
+            peer_id: chat,
+            message: logText,
+        })
 	}
     private async generateKickLog(punisher: number, user: number, reason?: string) {
         const name = await this.userRepo.getMemberNameInfo(user);

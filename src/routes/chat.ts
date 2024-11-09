@@ -35,8 +35,8 @@ export default (chatService: ChatService) => {
 		route('/:id/setSetting', controller.setSetting.bind(controller), Method.post),
 
 		route('/:id/getRoles', controller.getRoles.bind(controller)),
-		route('/:id/leave', controller.leave.bind(controller), Method.post),
-		route('/:id/kick', controller.kick.bind(controller), Method.post),
+		route('/:chat/leave', controller.leave.bind(controller), Method.post),
+		route('/:chat/kick', controller.kick.bind(controller), Method.post),
 		
 		route('/:chat/user/:user/getStats', controller.getMemberStats.bind(controller)),
 		route('/:chat/user/:user/getRights', controller.getMemberRights.bind(controller)),
