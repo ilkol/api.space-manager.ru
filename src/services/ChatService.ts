@@ -58,8 +58,7 @@ export class ChatService extends Service {
     }
 	public async getMemberRights({chat, user, type}: {chat: string, user: number, type: string}) {
         const commandsAccess = await this.chatRepo.getChatCommandAccess(chat, type);
-		const userInfo = await this.chatRepo.getMemberRole(chat, user, type);
-
+		const userInfo = await this.chatRepo.getMember(chat, user, type);
 		
 		const result: { user_id: number; chat_id: number; [key: string]: any } = {
 			user_id: user,

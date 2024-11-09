@@ -4,6 +4,34 @@ import { Errors } from "../Exceptions";
 import { VKAPI } from "../VK/API";
 import { Returns } from "../controllers/ChatController";
 
+export interface ChatMember 
+{
+	chat_id: number;
+	user_id: number;
+	role: number;
+	messages: number;
+	last_message: number;
+	warns: number;
+	mute: number;
+	// smiles: number;
+	// stickers: number;
+	// reply: number;
+	togglenotify: boolean;
+	in_chat: boolean;
+	protection_time: number;
+	// reposts: number;
+	// audio: number;
+	// photo: number;
+	// video: number;
+	// files: number;
+	join_date: number;
+	last_message_ids: string;
+	muteinfo: string;
+	// mats: number;
+	immunity: number;
+	invited_by: number;
+}
+
 export interface defaultUserInfo
 {
 	id: number;
@@ -410,12 +438,11 @@ export class ChatRepository extends Repository
 		}
 		return commandsAccess;
 	}
-	public async getMemberRole(chat: string, user: number, type: string)
-	{
+	public async getMember(chat: string, user: number, type: string): Promise<ChatMember> {
 		let query = `
 			SELECT 
-				role
-			FROM users
+				u.*
+			FROM users u
 			WHERE user_id = ? AND chat_id = 
 		`;
 		query = this.buildChatQuery(query, type);
