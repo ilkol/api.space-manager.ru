@@ -5,9 +5,9 @@ import Joi from 'joi';
 
 export class UserController extends AbstractController
 {
-    constructor(db: DB)
+    constructor(private db: DB)
     {
-        super(db);
+        super();
     }
 
     getUsers(req: Request, res: Response): void {

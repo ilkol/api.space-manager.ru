@@ -1,4 +1,4 @@
-import { Sex } from "./controllers/ChatController";
+import { Sex } from "./repositories/UserRepository";
 
 export enum PhrasesList {
 	userLeave,

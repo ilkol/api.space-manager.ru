@@ -2,6 +2,7 @@ import { RequestHandler, Router } from 'express';
 import { UserController } from '../controllers/UserController';
 import { DB } from '../DB';
 import { ChatController } from '../controllers/ChatController';
+import { ChatService } from '../services/ChatService';
 
 enum Method {
 	get,
@@ -20,10 +21,10 @@ function route(path: string, controller: RequestHandler, method: Method = Method
     return {path, controller, method};
 }
 
-export default (db: DB) => {
+export default (chatService: ChatService) => {
 
     const router = Router();
-    const controller = new ChatController(db);
+    const controller = new ChatController(chatService);
     
     const routes: Route[] = [
         route('/:id/getInfo', controller.getInfo.bind(controller)),

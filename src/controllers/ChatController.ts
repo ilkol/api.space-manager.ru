@@ -2,119 +2,21 @@ import { NextFunction, Request, Response } from 'express';
 import { DB } from '../DB';
 import { AbstractController } from './AbstractController';
 import Joi from 'joi';
-import { App } from '../Application';
-import axios from 'axios';
 import { CommandRights } from '../utils/CommandRights';
 import { Errors } from '../Exceptions';
 import { VKAPI } from '../VK/API';
 import { Logger, LogType } from '../Logger';
 import { Phrases } from '../Phrases';
-
-export enum Sex {
-	club = 0,
-	female = 1,
-	male = 2,
-}
-
-interface UserNameInfo
-{
-	id: number;
-	sex: Sex;
-	nom: string;
-	gen: string;
-	dat: string;
-	acc: string;
-}
-
-interface defaultUserInfo
-{
-	id: number;
-	avatar?: string;
-	name: string;
-}
-
-interface UserInfo extends defaultUserInfo
-{
-	role: number;
-	roleName: string|null;
-	nick: string|null;
-}
+import { ChatService } from '../services/ChatService';
 
 
-function user(data: any): UserInfo
-{
-	return {
-		id: data.user_id,
-		role: data.role,
-		name: "",
-		roleName: data.roleName,
-		nick: data.nick
-	};
-}
 
-interface Role
-{
-	name: string;
-	level: number;
-	emoji: string;
-}
-
-function rolesArrayFromDB(results: any[])
-{
-	const roles = new Map<number, Role>();
-	results.forEach(row => {
-		roles.set(row.level, row);
-	});
-	return roles;
-}
-
-interface BanInfo extends defaultUserInfo
-{
-	admin: number;
-	unban: number;
-	bantime: number;
-	reason: string|null;
-}
-function bannedUser(data: any): BanInfo
-{
-	return {
-		id: data.user_id,
-		name: "",
-		admin: data.admin_id,
-		unban: data.unban_time,
-		bantime: data.ban_time,
-		reason: data.reason
-	};
-}
-
-interface ChatMemberStatistics extends UserInfo
-{
-	immunity: number;
-	immunityRole: string|null;
-	
-}
-
-const defaultRolesName: Map<number, string> = new Map([
-	[0, "Участник"],
-	[20, "Модератор"],
-	[40, "Старший Модератор"],
-	[60, "Администратор"],
-	[80, "Старший Администратор"],
-	[100, "Создатель чата"]
-]);
-
-function checkDefaultRole(user: UserInfo)
-{
-	if(user.roleName === null) {
-		user.roleName = defaultRolesName.get(user.role) ?? "Ошибка";
-	} 
-}
 
 export class ChatController extends AbstractController
 {
-    constructor(db: DB)
+    constructor(private readonly service: ChatService)
     {
-        super(db);
+        super();
     }
 
 	private validateInfo(req: Request) {
@@ -200,7 +102,7 @@ export class ChatController extends AbstractController
     }
 	
 
-	async getInfo(req: Request, res: Response, next: NextFunction) {
+	public async getInfo(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
@@ -210,74 +112,15 @@ export class ChatController extends AbstractController
 
         const { id, type } = validationResult.value;
 
-		let query: string;
-		if(type === "peer_id") {
-			query = `
-				SELECT 
-					c.chat_id uid,
-					c.status 'status',
-					c.title title,
-					c.photo_link avatar,
-					c.messages messages,
-					
-					count_table.count membersCount,
-					ban_count_table.count bannedUsersCount
-				FROM chats c
-				LEFT JOIN (
-					SELECT u.chat_id, COUNT(*) AS count
-					FROM users u
-					WHERE u.in_chat = 1
-					GROUP BY u.chat_id
-				) count_table USING(chat_id)
-				LEFT JOIN (
-					SELECT b.chat_id, COUNT(*) AS count
-					FROM banlist b
-					GROUP BY b.chat_id
-				) ban_count_table USING(chat_id)
-
-				WHERE c.chat_id = ?
-				LIMIT 1;
-			`;
-		} else {
-			query = `
-				SELECT 
-					c.chat_uid uid,
-					c.status 'status',
-					c.title title,
-					c.photo_link avatar,
-					c.messages messages,
-					
-					count_table.count membersCount,
-					ban_count_table.count bannedUsersCount
-				FROM chats c
-				LEFT JOIN (
-					SELECT u.chat_id, COUNT(*) AS count
-					FROM users u
-					WHERE u.in_chat = 1
-					GROUP BY u.chat_id
-				) count_table USING(chat_id)
-				LEFT JOIN (
-					SELECT b.chat_id, COUNT(*) AS count
-					FROM banlist b
-					GROUP BY b.chat_id
-				) ban_count_table USING(chat_id)
-				WHERE c.chat_uid = ?
-				LIMIT 1;
-			`;
-		}
-
-		const queryParams = [id];
-
-        const [results]: any = await this.db.query(query, queryParams);
-
-		if (results) {
+		try {
+			const results = await this.service.getInfo(id, type);
 			res.json(results);
-		} else {
-			next(new Errors.QueryError("Данные чата не найдены"));
+		} catch(e) {
+			next(e);
 		}
     }
 
-	async getMembers(req: Request, res: Response, next: NextFunction) {
+	public async getMembers(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
@@ -287,46 +130,15 @@ export class ChatController extends AbstractController
 
         let { id, type } = validationResult.value;
 		
-		
-		let query: string = `
-			SELECT 
-				u.*,
-				r.name roleName,
-				n.nick
-			FROM users u
-			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
-			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
-			WHERE u.in_chat = 1 AND u.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [id];
-
-        const results: any = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Данные о пользователях в чате не найдены"));
-			return;
+		try {
+			const results = await this.service.getMembers(id, type);
+			res.json(results);
+		} catch(e) {
+			next(e);
 		}
-		if(results.length === 0) {
-			res.json([]);
-			return;
-		}
-		
-		const usersArray: UserInfo[] = results.map(user);
-		id = results[0].chat_id;
-		
-		const error = await this.updatePhotoInInfo(id, usersArray);
-		if(error) {
-			res.json(error);
-			return;
-		}
-
-		usersArray.map(checkDefaultRole);
-		
-		res.json(usersArray);
     }
 
-	async getBannedUsers(req: Request, res: Response, next: NextFunction) {
+	public async getBannedUsers(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
@@ -336,39 +148,15 @@ export class ChatController extends AbstractController
 
         let { id, type } = validationResult.value;
 		
-		
-		let query: string = `
-			SELECT 
-				b.*
-			FROM banlist b
-			WHERE b.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [id];
-
-        const results: any = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Заблокированные пользователи не найдены"));
-			return;
-		}
-		if(results.length === 0) {
-			res.json([]);
-			return;
+		try {
+			const results = await this.service.getBannedUsers(id, type);
+			res.json(results);
+		} catch(e) {
+			next(e);
 		}
 		
-		const usersArray: BanInfo[] = results.map(bannedUser);
-		
-		id = results[0].chat_id;
-		const error = await this.updatePhotoInInfo(id, usersArray);
-		if(error) {
-			res.json(error);
-			return;
-		}
-		
-		res.json(usersArray);
     }
-	async getSettings(req: Request, res: Response, next: NextFunction) {
+	public async getSettings(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
@@ -378,47 +166,15 @@ export class ChatController extends AbstractController
 
         let { id, type } = validationResult.value;
 		
-		
-		let query: string = `
-			SELECT 
-				chat_id uid,
-				togglefeed toggleFeed,
-				kickmenu kickMenu,
-				leavemenu leaveMenu,
-				hideusers hideUsers,
-				nameType nameType,
-				unPunishNotify unPunishNotify,
-				unRoleAfterKick unRoleAfterKick,
-				autounban autounban,
-				roleLevelStats roleLevelStats,
-				muteType,
-				
-				si_messages,
-				si_smilies,
-				si_stickers,
-				si_reply,
-				si_photo,
-				si_video,
-				si_files,
-				si_audio,
-				si_reposts,
-				si_mats
-			FROM settings s
-			WHERE s.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [id];
-
-        const [results]: any = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Настройки чата не найдены"));
-			return;
+		try {
+			const results = await this.service.getSettings(id, type);
+			res.json(results);
+		} catch(e) {
+			next(e);
 		}
 		
-		res.json(results);
     }
-	async setSetting(req: Request, res: Response, next: NextFunction) {
+	public async setSetting(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateSetSettings(req);
 
         if (validationResult.error) {
@@ -429,34 +185,14 @@ export class ChatController extends AbstractController
         let { id, type, setting, value, user_id } = validationResult.value;
 		
 		try {
-			if(!(await this.checkMemberRight(user_id, id, type, CommandRights.settings))) {
-				next(new Errors.NoPermissions());	
-				return;
-			}
+			await this.service.setSetting(id, type, setting, value, user_id);
+			res.json(true);
 		} catch(e) {
 			next(e);
-			return;
 		}
 		
-		let query: string = `
-			UPDATE settings
-			SET 
-				${setting} = ${value ? 1 : 0}
-			WHERE chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [id];
-
-        const results = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Не удалось изменить настройки"));
-			return;
-		}
-		
-		res.json(true);
     }
-	async getRoles(req: Request, res: Response, next: NextFunction) {
+	public async getRoles(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateInfo(req);
 
         if (validationResult.error) {
@@ -466,79 +202,14 @@ export class ChatController extends AbstractController
 
         let { id, type } = validationResult.value;
 		
-		
-		let query: string = `
-			SELECT 
-				name,
-				level,
-				emoji
-			FROM roles
-			WHERE chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [id];
-
-        const results: any = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Не удалось запросить роли в чате"));
-			return;
-		}
-		const roles: Map<number, Role> = rolesArrayFromDB(results);
-		defaultRolesName.forEach((name, level) => {
-			if(!roles.has(level)) {
-			  roles.set(level, {
-				name: name,
-				level: level,
-				emoji: ""
-			  });
-			}
-		});
-		
-		res.json(Array.from(roles.values()).sort((a, b) => b.level - a.level));
-    }
-
-
-	private async updatePhotoInInfo(id: number, users: defaultUserInfo[]): Promise<any|undefined>
-	{
 		try {
-			const result = await VKAPI.getConversationMembers({
-				peer_id: id,
-				fields: "photo_50"
-			});
-
-			if(result.error) {
-				const error = result.error;
-				console.error("Ошибка при выполнении запроса к VK API");
-				console.log(error);
-				
-				return {
-					error: error.error_code,
-					message: error.error_msg
-				};	
-			}
-
-			let profiles = result.response.profiles;
-			let groups = result.response.groups;
-
-			await Promise.all(users.map(async (user) => {
-				const profile = profiles.find((el: any) => el.id === user.id);
-				const group = groups.find((el: any) => el.id === -user.id);
-
-				if (profile) {
-					user.avatar = profile.photo_50;
-					user.name = `${profile.first_name} ${profile.last_name}`;
-				}
-				if (group) {
-					user.avatar = group.photo_50;
-					user.name = group.name;
-				}
-			}));
-		} catch(e) {
-			return e;
+			const result = await this.service.getRoles(id, type);
+			res.json(result);
 		}
-	}
-
+		catch(e) {
+			next(e);
+		}		
+    }
 	private validateMemberStats(req: Request) {
 		const schema = Joi.object({
             chat: Joi.alternatives().try(
@@ -570,7 +241,7 @@ export class ChatController extends AbstractController
 		return { value };
     }
 
-	async getMemberStats(req: Request, res: Response, next: NextFunction) {
+	public async getMemberStats(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateMemberStats(req);
 
         if (validationResult.error) {
@@ -581,100 +252,15 @@ export class ChatController extends AbstractController
         let { chat, user, type } = validationResult.value;
 		
 		
-		let query: string = `
-			SELECT 
-				u.user_id id,
-				u.role,
-				warns, 
-				mute,
-				togglenotify,
-				immunity,
-				join_date,
-				messages,
-				smilies,
-				stickers,
-				reply,
-				reposts,
-				audio,
-				photo,
-				video, 
-				files,
-				mats,
-
-				r.name roleName,
-				r_immunity.name immunityRole,
-				n.nick
-			FROM users u
-			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
-			LEFT JOIN roles r_immunity ON r_immunity.chat_id = u.chat_id AND r_immunity.level = u.immunity
-			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
-			WHERE u.user_id = ? AND u.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-		const queryParams = [user, chat];
-
-        const [results]: any = await this.db.query(query, queryParams);
-		if(!results) {
-			next(new Errors.QueryError("Статистика участника чата не найдена"));
-			return;
+		try {
+			const result = await this.service.getMemberStats(chat, user, type);
+			res.json(result);
+		} catch(e) {
+			next(e);
 		}
-		
-		const info = <ChatMemberStatistics>results;
-		const id = results.id;
-
-		const error = await this.updatePhotoInInfo(id, [info]);
-		if(error) {
-			res.json(error);
-			return;
-		}
-
-		checkDefaultRole(info);
-		if(info.immunity !== 0 && info.immunityRole === null) {
-			info.immunityRole = defaultRolesName.get(info.immunity) ?? "Ошибка";
-		} 
-
-		res.json(info);
     }
-	async checkMemberRight(user: number, chat: string, chatIDType: string, setting: CommandRights): Promise<boolean>
-	{
-		let query: string = `
-			SELECT 
-				a.*,
-			FROM commandsAccess a
-			LEFT JOIN commands c ON c.id = a.command
-			WHERE name = ? AND a.chat_id = 
-		`;
-		query = this.buildChatQuery(query, chatIDType);
-		query += ' LIMIT !';
 
-		const [result]: any = await this.db.query(query, [setting, chat]);
-
-		if(!result) {
-			throw new Errors.QueryError('Не найдены права для этого чата');
-		}
-
-		query = `
-			SELECT 
-				role
-			FROM users
-			WHERE user_id = ? AND chat_id = 
-		`;
-		query = this.buildChatQuery(query, chatIDType);
-		query += ' LIMIT 1';
-		
-
-        const [userInfo]: any = await this.db.query(query, [user, chat]);
-		if(!userInfo) {
-			throw new Errors.QueryError('Не найдены информация о пользователе чата');
-		}
-
-		const value = result[setting];
-		const [minRole] = value.split('|').map(Number);
-
-		return userInfo.role >= minRole;
-	}
-	async getMemberRights(req: Request, res: Response, next: NextFunction) {
+	public async getMemberRights(req: Request, res: Response, next: NextFunction) {
         const validationResult = this.validateMemberStats(req);
 
         if (validationResult.error) {
@@ -684,59 +270,13 @@ export class ChatController extends AbstractController
 
         let { chat, user, type } = validationResult.value;
 		
-		
-		let query: string = `
-			SELECT 
-				a.*,
-				c.name
-			FROM commandsAccess a
-			LEFT JOIN commands c ON c.id = a.command
-			WHERE a.chat_id = 
-		`;
-		query = this.buildChatQuery(query, type);
-		
-
-        const commandsAccess: any = await this.db.query(query, [chat]);
-
-		if(!commandsAccess) {
-			next(new Errors.QueryError());
-			return;
-		}
-		if(commandsAccess.length === 0) {
-			next(new Errors.QueryError("Не найдены права на использование команд в чате."));
-			return;
+		try {
+			const result = await this.service.getMemberRights(chat, user, type);	
+			res.json(result);
+		} catch(e) {
+			next(e);
 		}
 
-		query = `
-			SELECT 
-				role
-			FROM users
-			WHERE user_id = ? AND chat_id = 
-		`;
-		query = this.buildChatQuery(query, type);
-		query += ' LIMIT 1';
-		
-
-        const userInfoRes: any = await this.db.query(query, [user, chat]);
-		if(!userInfoRes) {
-			next(new Errors.QueryError("Не найдены данные об участнике чата"));
-			return;
-		}
-		const [userInfo] = userInfoRes;
-		
-		const result: { user_id: number; chat_id: number; [key: string]: any } = {
-			user_id: user,
-			chat_id: chat,
-		};
-
-		const role = userInfo.role;
-		commandsAccess.forEach((element: {chat_id: number, command: number, role: number, limitTime: number, limitCount: number, name: string}) => {
-			const cmd = element.name;
-			result[cmd] = role >= element.role;
-			
-		});
-
-		res.json(result);
     }
 
 	private buildChatQuery(baseQuery: string, type: string): string {
@@ -789,52 +329,11 @@ export class ChatController extends AbstractController
         let { chat, user, type } = validationResult.value;
 
 		try {
-			if(!(await this.checkMemberRight(user, chat, type, CommandRights.selfKick))) {
-				next(new Errors.NoPermissions());	
-				return;
-			}
+			await this.service.leaveChat(chat, user, type);
+			res.json(true);
 		} catch(e) {
 			next(e);
-			return;
 		}
-
-
-		if(type === "uid") {
-			let query = `
-				SELECT 
-					chat_id
-				FROM users
-				WHERE user_id = ? AND chat_id = 
-			`;
-			query = this.buildChatQuery(query, type);
-			query += ' LIMIT 1';
-			
-
-			const userInfo: any = await this.db.query(query, [user, chat]);
-			if(!userInfo) {
-				next(new Errors.QueryError("Не удалось найти чат."));
-				return;
-			}
-			chat = userInfo.chat_id;
-		}
-		
-		const name = await this.getMemberNameInfo(user);
-		Logger.log(chat, LogType.userLeave, { 
-			user: Phrases.formatMentionName(user, name.nom),
-			gender: Phrases.getGenderLabel(name.sex),
-		});
-		try {
-			await this.kickUser(chat, user);
-			await VKAPI.sendMessage({
-				peer_id: chat,
-				message: `[id${user}|Пользователь] пожелал покинуть чат.`
-			});
-		} catch(e) {
-			next(e);
-			return;
-		}
-
-		res.json(true);
 	}
 
 	private validateKick(req: Request) {
@@ -875,133 +374,12 @@ export class ChatController extends AbstractController
         let { chat, user, punisher, reason, type } = validationResult.value;
 
 		try {
-			if(!(await this.checkMemberRight(punisher, chat, type, CommandRights.kick))) {
-				next(new Errors.NoPermissions());	
-				return;
-			}
+			await this.service.kickMember(chat, user, punisher, reason, type);
+			res.json(true);
 		} catch(e) {
 			next(e);
-			return;
 		}
 
-
-		if(type === "uid") {
-			let query = `
-				SELECT 
-					chat_id
-				FROM users
-				WHERE user_id = ? AND chat_id = 
-			`;
-			query = this.buildChatQuery(query, type);
-			query += ' LIMIT 1';
-			
-
-			const [userInfo]: any = await this.db.query(query, [user, chat]);
-			if(!userInfo) {
-				next(new Errors.QueryError("Не удалось найти чат."));
-				return;
-			}
-			chat = userInfo.chat_id;
-		}
-		
-		const name = await this.getMemberNameInfo(user);
-		const panisherName = await this.getMemberNameInfo(punisher);
-		const logText = Phrases.f(Phrases.List.kickUser, { 
-			user: Phrases.formatMentionName(user, name.acc),
-			punisher: Phrases.formatMentionName(punisher, panisherName.nom),
-			gender: Phrases.getGenderLabel(panisherName.sex),
-			reason: reason
-		})
-		Logger.logText(chat, logText);
-
-		try {
-			await this.kickUser(chat, user);
-			await VKAPI.sendMessage({
-				peer_id: chat,
-				message: logText
-			});
-		} catch(e) {
-			next(e);
-			return;
-		}
-
-		res.json(true);
 	}
 
-	private async kickUser(chat: number, user: number): Promise<void>
-	{	
-		const result = await VKAPI.kickUser({
-			chat_id: chat - 2000000000,
-			member_id: user
-		});
-		if(result.error) {
-			if(result.error.error_code === 15) {
-				throw new Errors.VKAccessDenied();
-			}
-			throw new Error(`[${result.error.error_code}] ${result.error.error_msg}`);
-		}
-		this.kickedUserUpdateInfo(chat, user);
-	}
-
-	private async kickedUserUpdateInfo(chat: number, user: number)
-	{
-		let query = `
-			UPDATE users
-			SET
-				in_chat = 0,
-				invited_by = 0,
-				last_message = 0,
-				role = CASE
-					WHEN (SELECT unRoleAfterKick FROM settings WHERE chat_id = ?) = 1
-					THEN (SELECT inviterole FROM chats WHERE chat_id = ?)
-					ELSE role
-				END
-			WHERE user_id = ? AND chat_id = ?
-			 LIMIT 1
-		`;
-	
-		const userInfo: any = await this.db.query(query, [chat, chat, user, chat]);
-	
-		if(!userInfo) {
-			throw new Errors.QueryError("Не удалось обновить информацию о пользователе чата");
-		}
-	}
-
-	private async getMemberNameInfo(user: number): Promise<UserNameInfo> {
-        let query: string = `
-			SELECT 
-				*
-			FROM names
-			WHERE user_id = ?
-			LIMIT 1
-		`;
-
-		const [result]: any = await this.db.query(query, [user]);
-
-		if(!result) {
-			throw new Errors.QueryError();
-		}
-
-		if( user < 0) {
-			return {
-				id: user,
-				sex: result.sex,
-				nom: result.name,
-				gen: result.nameDat,
-				dat: result.name,
-				acc: result.name,
-			}
-
-		}
-		else {
-			return {
-				id: user,
-				sex: result.sex,
-				nom: result.name,
-				gen: result.nameGen,
-				dat: result.nameDat,
-				acc: result.nameAcc,
-			}
-		}
-    }
 }

@@ -10,6 +10,9 @@ import userRoutes from './routes/user';
 import chatRoutes from './routes/chat';
 import { ErrorMiddleware } from './middleware/ErrorCather';
 import { Logger } from './Logger';
+import { ChatRepository } from './repositories/ChatRepository';
+import { UserRepository } from './repositories/UserRepository';
+import { ChatService } from './services/ChatService';
 
 export class App
 {
@@ -22,18 +25,29 @@ export class App
 	{
 		return App._vkToken;
 	}
+	
+	private chatRepo: ChatRepository;
+	private userRepo: UserRepository;
+
+	private chatService: ChatService;
 
     constructor(dbConfig: PoolOptions)
     {
 		App._vkToken = process.env.VK_TOKEN ?? "";
         this.app = express();
         this.db = this.createDBConnection(dbConfig);
+		this.chatRepo = new ChatRepository(this.db);
+		this.userRepo = new UserRepository(this.db);
+		
+		this.chatService = new ChatService(this.chatRepo, this.userRepo);
+
 		Logger.init(this.db);
 
         this.middlewares();
         this.routes();
         this.errorHandling();
     }
+
 
     private createDBConnection(dbConfig: PoolOptions): DB
     {
@@ -56,7 +70,7 @@ export class App
 
     private routes(): void {
         this.app.use('/user', userRoutes(this.db));
-        this.app.use('/chat', chatRoutes(this.db));
+        this.app.use('/chat', chatRoutes(this.chatService));
     }
 
     private errorHandling(): void {
