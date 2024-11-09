@@ -1,3 +1,4 @@
+import { Args } from "../controllers/ChatController";
 import { Errors } from "../Exceptions";
 import { Logger, LogType } from "../Logger";
 import { Phrases } from "../Phrases";
@@ -156,7 +157,7 @@ export class ChatService extends Service {
 		usersArray.map(checkDefaultRole);
 		return usersArray;
 	}
-	public async getInfo({chat, type}: {chat: string, type: string})
+	public async getInfo({chat, type}: Args<'getInfo'>)
 	{
 		return await this.chatRepo.getInfo(chat, type);
 	}

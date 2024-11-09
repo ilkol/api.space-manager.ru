@@ -184,3 +184,21 @@ export class ChatController extends AbstractController
 	}
 
 }
+
+export type Args<M extends keyof API> = Argsa[M];
+
+type Params<M extends keyof API> = Parameters<API[M]>;
+
+type Argsa = {
+	[M in keyof API]: Params<M>[0] extends undefined ? {} : NonNullable<Params<M>[0]>;
+}	
+
+export type AvatarURL = string;
+export enum ChatIDType {
+	peer = 'peer_id',
+	uid = 'uid'
+}
+export type API = {
+	getInfo(args: {chat: string|number; type: ChatIDType}): {uid: string; status: number; title: string; avatar: AvatarURL; messages: string; membersCount: number; bannedUsersCount: number;}
+}
+

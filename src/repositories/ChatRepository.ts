@@ -213,7 +213,7 @@ export class ChatRepository extends Repository
 		const usersArray: UserInfo[] = results.map(user);
 		return usersArray;
 	}
-	public async getInfo(chat: string, type: string)
+	public async getInfo(chat: string|number, type: string)
 	{
 		let query: string;
 		if(type === "peer_id") {
