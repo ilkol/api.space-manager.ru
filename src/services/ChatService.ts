@@ -51,12 +51,8 @@ export class ChatService extends Service {
         const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;
         await this.chatRepo.kickUser(chatId, user);
         
-        const logText = await this.generateKickLog(punisher, user, reason);
-		Logger.logText(chatId, logText);
-        await VKAPI.sendMessage({
-            peer_id: chatId,
-            message: logText,
-        });
+        await this.logKick(chatId, punisher, user, reason);
+		
 
         return true;
     }
@@ -269,16 +265,31 @@ export class ChatService extends Service {
         })
 	}
 
-    private async generateKickLog(punisher: number, user: number, reason?: string) {
+    private async logKick(chat: number, punisher: number, user: number, reason?: string) {
         const name = await this.userRepo.getMemberNameInfo(user);
 		const panisherInfo = await this.getUserInfo(punisher);
-		const logText = Phrases.f(Phrases.List.kickUser, { 
+		
+		Logger.log(LogType.kickUser, chat, { 
 			user: Phrases.formatMentionName(user, name.acc),
 			punisher: panisherInfo.formattedName,
 			gender: panisherInfo.genderLabel,
 			reason: reason
+		});
+
+		const nick = await this.chatRepo.getUserNick(chat, user);
+		const punisherNick = await this.chatRepo.getUserNick(chat, punisher);
+		
+		const logText = Phrases.f(Phrases.List.kickUser, { 
+			user: Phrases.formatMentionName(user, nick ?? name.acc),
+			punisher: punisherNick ? Phrases.formatMentionName(user, punisherNick) : panisherInfo.formattedName,
+			gender: panisherInfo.genderLabel,
+			reason: reason
 		})
-		return logText;
+
+		await VKAPI.sendMessage({
+            peer_id: chat,
+            message: logText,
+        });
     }
 
 	private async getUserInfo(userId: number) {
