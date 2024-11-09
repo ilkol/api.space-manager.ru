@@ -3,19 +3,22 @@ import { Sex } from "./repositories/UserRepository";
 export enum PhrasesList {
 	userLeave,
 	kickUser,
-	banUser
+	banUser,
+	changeSetting
 }
 
 export interface PhrasesParams {
     [PhrasesList.userLeave]: { user: string; gender: WordGender };
     [PhrasesList.kickUser]: { user: string; gender: WordGender; punisher: string; reason?: string};
 	[PhrasesList.banUser]: { user: string; gender: WordGender; punisher: string; reason?: string};
+	[PhrasesList.changeSetting]: { user: string; state: "в"|"вы"; gender: WordGender; setting: string};
 }
 
 const pharses = {
 	[PhrasesList.userLeave]: "{user} покинул{gender} чат",
 	[PhrasesList.kickUser]: "{punisher} исключил{gender} {user} из чата",
 	[PhrasesList.banUser]: "{punisher} заблокировал{gender} {time} {user}",
+	[PhrasesList.changeSetting]: "{user} {state}ключил{gender} {setting}",
 };
 
 

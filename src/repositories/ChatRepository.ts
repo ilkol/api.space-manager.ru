@@ -429,7 +429,7 @@ export class ChatRepository extends Repository
 		const [userInfo] = userInfoRes;
 		return userInfo;
 	}
-	public async getUserNick(chat: number, user: number): Promise<string> {
+	public async getUserNick(chat: number, user: number): Promise<string|undefined> {
 		let query = `
 			SELECT 
 				nick
@@ -442,6 +442,9 @@ export class ChatRepository extends Repository
         const userInfoRes: any = await this.db.query(query, [user, chat]);
 		if(!userInfoRes) {
 			throw new Errors.QueryError("Не найдены данные об участнике чата");
+		}
+		if(userInfoRes.length === 0) {
+			return undefined;
 		}
 		const [userInfo] = userInfoRes;
 		return userInfo.nick;

@@ -52,6 +52,9 @@ export class VKAPI
 	}
 	public static async sendMessage(args: SendMessageParams)
 	{
+		if(args.disable_mentions === undefined) {
+			args.disable_mentions = 1;
+		}
 		return this.query<VKSendMessageParams>('messages.send', {...args, random_id: (new Date()).getTime()});
 	}
 }
@@ -88,6 +91,7 @@ interface SendMessageParams
 {
 	peer_id: number;
 	message?: string;
+	disable_mentions?: 0|1;
 }
 interface VKSendMessageParams extends SendMessageParams
 {

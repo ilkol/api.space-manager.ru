@@ -6,11 +6,13 @@ export enum LogType {
     userLeave = PhrasesList.userLeave,
     kickUser = PhrasesList.kickUser,
     banUser = PhrasesList.banUser,
+	changeSetting = PhrasesList.changeSetting
 }
 type LogTypeToParams = {
     [LogType.userLeave]: PhrasesParams[PhrasesList.userLeave];
     [LogType.kickUser]: PhrasesParams[PhrasesList.kickUser];
     [LogType.banUser]: PhrasesParams[PhrasesList.banUser];
+	[LogType.changeSetting]: PhrasesParams[PhrasesList.changeSetting];
 };
 
 export class Logger

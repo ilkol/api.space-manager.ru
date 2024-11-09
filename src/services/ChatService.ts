@@ -122,6 +122,9 @@ export class ChatService extends Service {
         }
 		
 		await this.chatRepo.setSetting(chat, type, setting, value);		
+		const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;		
+		await this.logSetSetting(chatId, user, setting, value);
+
 		return true;
 	}
 	public async getSettings({chat, type}: {chat: string, type: string})
@@ -207,15 +210,65 @@ export class ChatService extends Service {
 
 		const nick = await this.chatRepo.getUserNick(chat, user);
 		const logText = Phrases.f(Phrases.List.userLeave, {
-			user: Phrases.formatMentionName(user, nick),
+			user: nick ? Phrases.formatMentionName(user, nick) : userInfo.formattedName,
 			gender: userInfo.genderLabel,
 		})
-
 		VKAPI.sendMessage({
             peer_id: chat,
             message: logText,
         })
 	}
+
+	private static settings: Record<string, string> = {
+		'togglefeed': 'оповещение чата о важных обновлениях',
+		'kickmenu': 'отображение меню с действиями после исключения участника из чата',
+		'leavemenu': 'отображение меню с действиями после выхода участника из чата',
+		'hideusers': 'скрытие бывших участников чата из топа',
+		'nameType': 'замену имени и фамилии участников на ник',
+		'unPunishNotify': 'оповещение чата об окончании срока блокировки, блокировки чата участника',
+		'unRoleAfterKick': 'выдачу роли по умолчанию участнику после исключения его из чата',
+		'autounban': 'разбан участника, если его пригласил в чат старший администратор',
+		'roleLevelStats': 'отображение уровня роли участника в статистике',
+		'muteType': 'блокировку чата участникам с помощью новой системы от ВК',
+	
+		'si_messages': 'отображение сообщений на графике',
+		'si_smilies': 'отображение смайлов на графике',
+		'si_stickers': 'отображение стикеров на графике',
+		'si_reply': 'отображение пересланных сообщений на графике',
+		'si_photo': 'отображение фото на графике',
+		'si_video': 'отображение видео на графике',
+		'si_files': 'отображение файлов на графике',
+		'si_audio': 'отображение голосовых сообщений на графике',
+		'si_reposts': 'отображение репостов на графике',
+		'si_mats': 'отображение сообщений с матом на графике'
+	};
+
+	private async logSetSetting(chat: number, user: number, setting: string, state: boolean) {
+		const userInfo = await this.getUserInfo(user);
+		const stateLabel = state ? "в" : "вы";
+
+		const settingName = ChatService.settings[setting];
+
+		Logger.log(chat, LogType.changeSetting, { 
+			user:userInfo.formattedName,
+			gender: userInfo.genderLabel,
+			setting: settingName,
+			state: stateLabel
+		});
+
+		const nick = await this.chatRepo.getUserNick(chat, user);
+		const logText = Phrases.f(Phrases.List.changeSetting, {
+			user: nick ? Phrases.formatMentionName(user, nick) : userInfo.formattedName,
+			gender: userInfo.genderLabel,
+			setting: settingName,
+			state: stateLabel
+		})
+		VKAPI.sendMessage({
+            peer_id: chat,
+            message: logText,
+        })
+	}
+
     private async generateKickLog(punisher: number, user: number, reason?: string) {
         const name = await this.userRepo.getMemberNameInfo(user);
 		const panisherInfo = await this.getUserInfo(punisher);
