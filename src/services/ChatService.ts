@@ -183,8 +183,8 @@ export class ChatService extends Service {
 			let groups = result.response.groups;
 
 			await Promise.all(users.map(async (user) => {
-				const profile = profiles.find((el: any) => el.id === user.id);
-				const group = groups.find((el: any) => el.id === -user.id);
+				const profile = profiles ? profiles.find((el: any) => el.id === user.id) : false;
+				const group = groups ? groups.find((el: any) => el.id === -user.id) : false;
 
 				if (profile) {
 					user.avatar = profile.photo_50;
