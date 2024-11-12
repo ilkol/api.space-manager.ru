@@ -476,4 +476,38 @@ export class ChatRepository extends Repository
 		const [userInfo] = userInfoRes;
 		return userInfo.nick;
 	}
+	public async muteUser(chat: number, user: number, time: number): Promise<void> {
+		const result = await this.kickUserFromChatAPI(chat, user);
+	
+		if (!result.success) {
+			const errorMessage = result.error?.error_msg || 'Неизвестная ошибка при попытке исключить пользователя';
+			throw new Errors.VKAccessDenied(errorMessage);
+		}
+	
+		await this.kickedUserUpdateInfo(chat, user);
+	}
+	private async getMuteType(chat: number)//: Promise<MuteType>
+	{
+		let query: string = `
+			SELECT 
+				muteType,				
+			FROM settings s
+			WHERE s.chat_id = ?
+			LIMIT 1
+		`;
+		
+        const [results]: any = await this.db.query(query, [chat]);
+		if(!results) {
+			throw new Errors.QueryError("Настройки чата не найдены");
+		}
+		if(results.muteType === 1) {
+			// return 
+		}
+	}
+}
+
+enum MuteType
+{
+	vkMute,
+	deleteMessage
 }

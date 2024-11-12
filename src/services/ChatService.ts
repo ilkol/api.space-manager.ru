@@ -159,6 +159,24 @@ export class ChatService extends Service {
 	{
 		return await this.chatRepo.getInfo(chat, type);
 	}
+	public async muteMember({chat, user, punisher, reason, type, time}: {chat: string, user: number, punisher: number, reason: string, type: string, time: number}) {
+        const hasRight = await this.chatRepo.checkMemberRight(punisher, chat, type, CommandRights.kick);
+        if (!hasRight) {
+            throw new Errors.NoPermissions();
+        }
+		const userInfo = await this.chatRepo.getMember(chat, user, type);
+		const punisherInfo = await this.chatRepo.getMember(chat, punisher, type);
+		this.checkCanPunish(userInfo, punisherInfo);
+
+
+        const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;
+        await this.chatRepo.muteUser(chatId, user, time);
+        
+        await this.logKick(chatId, punisher, user, reason);
+		
+
+        return true;
+    }
 
 	private async updatePhotoInInfo(id: number, users: defaultUserInfo[]): Promise<any|undefined>
 	{

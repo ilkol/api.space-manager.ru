@@ -187,6 +187,33 @@ export class ChatController extends AbstractController
 		await this.needPunisher(this.service.kickMember, req, res, next);
 	}
 
+	private validateMute() {
+		return Joi.object({
+            chat: Joi.alternatives().try(
+                Joi.number().integer().min(2000000001),
+                Joi.string().min(3)
+            ).required(),
+            type: Joi.string().valid('peer_id', 'uid').required(),
+        	punisher: Joi.number().integer().max(2000000000).required(),
+			user: Joi.number().integer().max(2000000000).required(),
+            time: Joi.number().integer().required(),
+            reason: Joi.string(),
+        });
+    }
+	private async needPunisherAndTime(method: Function, req: Request, res: Response, next: NextFunction) {
+		await this.handleRequest(this.validateMute(), method.bind(this.service), { 
+            chat: req.params.chat, 
+            type: req.body.type,
+			user: req.body.user,
+			punisher: req.body.punisher,
+			reason: req.body.reason,
+			time: req.body.time
+        }, res, next);
+	}
+	public async mute(req: Request, res: Response, next: NextFunction) {
+		await this.needPunisherAndTime(this.service.muteMember, req, res, next);
+	}
+
 }
 
 export type Args<M extends keyof API> = Argsa[M];
