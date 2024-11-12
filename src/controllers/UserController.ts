@@ -76,7 +76,7 @@ export class UserController extends AbstractController
 		const query = `
 			SELECT 
 				COUNT(*) AS messages
-			FROM users_statistics
+			FROM usersStatistics
 			WHERE user_id = ?
 			AND DATE(FROM_UNIXTIME(time)) = CURDATE();
 		`;
