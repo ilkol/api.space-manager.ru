@@ -13,6 +13,7 @@ import { Logger } from './Logger';
 import { ChatRepository } from './repositories/ChatRepository';
 import { UserRepository } from './repositories/UserRepository';
 import { ChatService } from './services/ChatService';
+import { DataSourceOptions } from 'typeorm';
 
 export class App
 {
@@ -31,7 +32,7 @@ export class App
 
 	private chatService: ChatService;
 
-    constructor(dbConfig: PoolOptions)
+    constructor(dbConfig: DataSourceOptions)
     {
 		App._vkToken = process.env.VK_TOKEN ?? "";
         this.app = express();
@@ -49,7 +50,7 @@ export class App
     }
 
 
-    private createDBConnection(dbConfig: PoolOptions): DB
+    private createDBConnection(dbConfig: DataSourceOptions): DB
     {
         return new DB(dbConfig);
     }

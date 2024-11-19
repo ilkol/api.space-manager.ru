@@ -1,19 +1,17 @@
-import mysql from 'mysql2/promise'; // Используем promise API
+import { DataSource, DataSourceOptions } from 'typeorm';
 
 export class DB {
-    private connection: mysql.Pool;
+    private connection: DataSource;
 
-    constructor(connectData: mysql.PoolOptions) {
-        this.connection = mysql.createPool(connectData);
-
-        // Проверка подключения
-        this.connection.getConnection()
-            .then(() => {
-                console.log('[Logs:Mysql] Успешное подключение к базе данных.');
-            })
-            .catch((err: any) => {
-                console.error('[Logs:Mysql] Ошибка при подключении к базе данных:', err.message);
-            });
+    constructor(connectData: DataSourceOptions) {
+        this.connection = new DataSource(connectData);
+        this.connection.initialize()
+        .then(() => {
+            console.log('База данных успешно подключена!');
+        })
+        .catch((error) => {
+            console.error('Ошибка подключения к базе данных:', error);
+        });
     }
 
 	/**
@@ -22,9 +20,9 @@ export class DB {
 	 * @param params параметры для подстановки в запрос
 	 * @returns результат при успешном выполнении и null при выброшенном исключении
 	 */
-    public async query(query: string, params?: any[]): Promise<mysql.QueryResult|null> {
+    public async query(query: string, params?: any): Promise<any> {
         try {
-            const [results] = await this.connection.query(query, params);
+            const results = await this.connection.query(query, params);
             return results;
         } catch (error) {
             console.error('Ошибка выполнения запроса:', error);
