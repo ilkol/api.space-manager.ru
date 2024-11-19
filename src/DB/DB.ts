@@ -1,6 +1,7 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { Chat, ChatMember, Role, Setting, UserStatistic } from './Entities';
 import { Ban } from './Entities/Ban';
+import { Nick } from './Entities/Nick';
 
 export class DB {
     private connection: DataSource;
@@ -14,7 +15,8 @@ export class DB {
                 Chat,
                 Role,
                 Setting,
-                Ban
+                Ban,
+                Nick
             ]
         });
         this.connection.initialize()

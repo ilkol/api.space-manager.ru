@@ -6,6 +6,7 @@ import { Returns } from "../controllers/ChatController";
 
 import * as Entities from '../DB/Entities';
 import { SettingList } from "../services/ChatService";
+import { Nick } from "../DB/Entities/Nick";
 
 export interface ChatMember 
 {
@@ -95,7 +96,7 @@ function user(data: any): UserInfo
 		id: data.user_id,
 		role: data.role,
 		name: "",
-		roleName: data.roleName,
+		roleName: data.name,
 		nick: data.nick
 	};
 }
@@ -220,22 +221,18 @@ export class ChatRepository extends Repository
 	}
 	public async getMembers(chat: string, type: string)
 	{	
-		let query: string = `
-			SELECT 
-				u.*,
-				r.name roleName,
-				n.nick
-			FROM users u
-			LEFT JOIN roles r on r.chat_id = u.chat_id and r.level=u.role
-			LEFT JOIN nicks n on n.chat_id = u.chat_id and n.user_id = u.user_id
-			WHERE u.in_chat = 1 AND u.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
+		const chat_id = await this.normalizeChatID(chat, type);
 		
-        const results: any = await this.db.query(query, [chat]);
-		if(!results) {
-			throw new Errors.QueryError("Данные о пользователях в чате не найдены");
-		}
+		const queryBuilder = this.db.db.getRepository(Entities.ChatMember).createQueryBuilder('u');
+		const results = await queryBuilder
+			.select('u.*')
+			.addSelect('r.name', 'roleName')
+			.addSelect('n.nick', 'nick')
+			.leftJoin(Entities.Role, 'r', 'r.chat_id = u.chat_id and r.level=u.role')
+			.leftJoin(Nick, 'n', 'n.chat_id = u.chat_id and n.user_id = u.user_id')
+			.where('u.chat_id = :chat_id', { chat_id })
+			.andWhere('u.in_chat = 1')
+			.getRawMany();
 
 		const usersArray: UserInfo[] = results.map(user);
 		return usersArray;

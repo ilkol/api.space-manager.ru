@@ -42,7 +42,7 @@ const defaultRolesName: Map<number, string> = new Map([
 
 function checkDefaultRole(user: UserInfo)
 {
-	if(user.roleName === null) {
+	if(user.roleName === null || user.roleName === undefined) {
 		user.roleName = defaultRolesName.get(user.role) ?? "Ошибка";
 	} 
 }

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryColumn } from "typeorm";
+import { Column, Entity, JoinColumn, OneToMany, PrimaryColumn } from "typeorm";
+import { ChatMember } from "./ChatMember";
 
 @Entity('roles')
 export class Role
@@ -18,4 +19,11 @@ export class Role
         length: 16
     })
     emoji!: string;
+
+    @OneToMany(() => ChatMember, (chatMember) => chatMember.role)   
+    @JoinColumn([
+        {name: "chat_id"},
+        {name: "level"}
+    ]) 
+    users!: ChatMember[];
 }

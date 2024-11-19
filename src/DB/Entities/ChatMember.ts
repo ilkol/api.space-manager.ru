@@ -1,5 +1,7 @@
-import { Column, Entity, IsNull, JoinColumn, ManyToMany, ManyToOne, OneToOne, PrimaryColumn } from "typeorm";
+import { Column, Entity, IsNull, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from "typeorm";
 import { Chat } from "./Chat";
+import { Role } from "./Role";
+import { Nick } from "./Nick";
 
 @Entity('users')
 export class ChatMember
@@ -11,8 +13,10 @@ export class ChatMember
     chat_id!: number;
     
 
-    @Column()
-    role!: number;
+    @Column({
+        name: 'role'
+    })
+    roleLevel!: number;
 
     @Column()
     messages!: number;
@@ -67,4 +71,15 @@ export class ChatMember
     @ManyToOne(() => Chat, (chat) => chat.users)
     @JoinColumn({ name: 'chat_id' })
     chat!: Chat;
+
+    @ManyToOne(() => Role, (role) => role.users)
+    @JoinColumn([
+        { name: 'chat_id', referencedColumnName: 'chat_id' },
+        { name: 'role', referencedColumnName: 'level' },
+    ])
+    role!: Role;
+
+    @OneToOne(() => Nick, (nick) => nick.user)
+    @JoinColumn([{ name: 'chat_id' }, { name: 'user_id' }])
+    nick!: Nick;
 }
