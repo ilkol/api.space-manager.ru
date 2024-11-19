@@ -20,7 +20,7 @@ export class Chat
     @Column()
     messages!: number;
     @Column()
-    smiles!: number;
+    smilies!: number;
     @Column()
     stickers!: number;
     @Column()
@@ -62,7 +62,7 @@ export class Chat
     })
     mutecommand!: string;
     @Column()
-    iviterole!: number;
+    inviterole!: number;
     @Column({
         length: 512
     })

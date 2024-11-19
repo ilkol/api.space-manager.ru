@@ -4,6 +4,8 @@ import { Errors } from "../Exceptions";
 import { VKAPI } from "../VK/API";
 import { Returns } from "../controllers/ChatController";
 
+import * as Entities from '../DB/Entities';
+
 export interface ChatMember 
 {
 	chat_id: number;
@@ -135,21 +137,58 @@ export class ChatRepository extends Repository
 		await this.kickedUserUpdateInfo(chat, user);
 	}
 
+	private async normalizeChatID(id: string, type: string): Promise<number>
+	{
+		if(type === "peer_id") return +id;
+		const chat = await this.getChatIDByUID(id);
+		if(chat === null) {
+			throw new Errors.QueryError("Не удалось найти чат по UID");
+		} 
+		return chat.chat_id;
+	}
+	private async getChatIDByUID(uid: string)
+	{
+		const [result] =  await this.db.db.getRepository(Entities.Chat)
+			.find({
+				where: {
+					chat_uid: uid
+				},
+				select: [
+					"chat_id"
+				],
+				take: 1
+		});
+		return result;
+	}
+
 	public async getRoles(chat: string, type: string) {
-		let query: string = `
-			SELECT 
-				name,
-				level,
-				emoji
-			FROM roles
-			WHERE chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
+
+		const chat_id = await this.normalizeChatID(chat, type);
+
+		const results = await this.db.db.getRepository(Entities.Role)
+			.find({
+				where: {
+					chat_id
+				},
+				relations: {
+					
+				}
+			});
+
+		// let query: string = `
+		// 	SELECT 
+		// 		name,
+		// 		level,
+		// 		emoji
+		// 	FROM roles
+		// 	WHERE chat_id =
+		// `;
+		// query = this.buildChatQuery(query, type);
 		
-        const results: any = await this.db.query(query, [chat]);
-		if(!results) {
-			throw new Errors.QueryError("Не удалось запросить роли в чате");
-		}
+        // const results: any = await this.db.query(query, [chat]);
+		// if(!results) {
+		// 	throw new Errors.QueryError("Не удалось запросить роли в чате");
+		// }
 		const roles: Map<number, Role> = rolesArrayFromDB(results);
 		return roles;
 	}
