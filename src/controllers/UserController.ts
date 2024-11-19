@@ -4,6 +4,8 @@ import { AbstractController } from './AbstractController';
 import Joi from 'joi';
 import { UserStatistic } from '../DB/Entities/UserStatistic';
 import { Between } from 'typeorm';
+import { ChatMember } from '../DB/Entities/ChatMember';
+import { Chat } from '../DB/Entities/Chat';
 
 export class UserController extends AbstractController
 {
@@ -43,28 +45,29 @@ export class UserController extends AbstractController
 
         const { id } = validationResult.value;
 
-		const query = `
-			SELECT 
-				c.chat_uid id, 
-				c.title title, 
-				c.photo_link avatar,
-				count_table.count count
-			FROM users u
-			LEFT JOIN chats c USING(chat_id)
-			LEFT JOIN (
-				SELECT u.chat_id, COUNT(*) AS count
-				FROM users u
-				WHERE u.in_chat = 1
-				GROUP BY u.chat_id
-			) count_table USING(chat_id)
-			WHERE u.user_id = ?
-			AND u.in_chat = 1
-		`;
-		const queryParams = [id];
+		const queryBuilder = this.db.db.getRepository(ChatMember).createQueryBuilder('u');
 
-        const results = await this.db.query(query, queryParams);
-        
-        res.json(results);
+		const result = await queryBuilder
+			.select('c.chat_uid', 'id')
+			.addSelect('c.title', 'title')
+			.addSelect('c.photo_link', 'avatar')
+			.addSelect(
+				subQuery => {
+					return subQuery
+						.select('COUNT(u.chat_id)', 'count')
+						.from(ChatMember, 'u')
+						.where('u.in_chat = 1')
+						.andWhere('u.chat_id = c.chat_id')
+						.groupBy('u.chat_id');
+				},
+				'count'
+			)
+			.leftJoin(Chat, 'c', 'u.chat_id = c.chat_id')
+			.where('u.user_id = :userId', { userId: id })
+			.andWhere('u.in_chat = 1')
+			.getRawMany();
+		
+        res.json(result);
     }
 
 	async getTodayActivityStatistics(req: Request, res: Response)

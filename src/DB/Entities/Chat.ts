@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { ChatMember } from "./ChatMember";
 
 @Entity('chats')
 export class Chat
@@ -67,4 +68,6 @@ export class Chat
     })
     photo_link!: string;
 
+    @OneToMany(() => ChatMember, (member) => member.chat)
+    users!: ChatMember[];
 }
