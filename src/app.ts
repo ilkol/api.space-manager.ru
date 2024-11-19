@@ -1,7 +1,7 @@
 import { App } from "./Application";
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({path: '../.env'});
 
 const app = new App({
     charset  : process.env.DB_CHARSET,
