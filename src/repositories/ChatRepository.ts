@@ -171,7 +171,7 @@ export class ChatRepository extends Repository
 				relations: {
 					
 				}
-			});
+		});
 
 		const roles: Map<number, Role> = rolesArrayFromDB(results);
 		return roles;
@@ -192,39 +192,13 @@ export class ChatRepository extends Repository
 	}
 	public async getSettings(chat: string, type: string)
 	{
-		let query: string = `
-			SELECT 
-				chat_id uid,
-				togglefeed toggleFeed,
-				kickmenu kickMenu,
-				leavemenu leaveMenu,
-				hideusers hideUsers,
-				nameType nameType,
-				unPunishNotify unPunishNotify,
-				unRoleAfterKick unRoleAfterKick,
-				autounban autounban,
-				roleLevelStats roleLevelStats,
-				muteType,
-				
-				si_messages,
-				si_smilies,
-				si_stickers,
-				si_reply,
-				si_photo,
-				si_video,
-				si_files,
-				si_audio,
-				si_reposts,
-				si_mats
-			FROM settings s
-			WHERE s.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-        const [results]: any = await this.db.query(query, [chat]);
-		if(!results) {
-			throw new Errors.QueryError("Настройки чата не найдены");
-		}
+		const chat_id = await this.normalizeChatID(chat, type);
+
+		const results = await this.db.db.getRepository(Entities.Setting)
+			.findOneBy({
+				chat_id
+		});
+
 		return results;
 	}
 	public async getBannedUsers(chat: string, type: string) {
