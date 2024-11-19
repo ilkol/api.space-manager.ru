@@ -2,7 +2,7 @@ import express, { Request, Response, Application, NextFunction } from 'express';
 import multer from 'multer';
 import cors from 'cors';
 
-import { DB } from "./DB";
+import { DB } from "./DB/DB";
 import { PoolOptions } from 'mysql2';
 import { AuthMiddleware } from './middleware/authtorization';
 

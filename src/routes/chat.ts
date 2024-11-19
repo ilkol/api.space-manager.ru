@@ -1,6 +1,6 @@
 import { RequestHandler, Router } from 'express';
 import { UserController } from '../controllers/UserController';
-import { DB } from '../DB';
+import { DB } from '../DB/DB';
 import { ChatController } from '../controllers/ChatController';
 import { ChatService } from '../services/ChatService';
 

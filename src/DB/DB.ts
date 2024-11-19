@@ -1,10 +1,16 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { UserStatistic } from './Entities/UserStatistic';
 
 export class DB {
     private connection: DataSource;
 
     constructor(connectData: DataSourceOptions) {
-        this.connection = new DataSource(connectData);
+        this.connection = new DataSource({
+            ...connectData,
+            entities: [
+                UserStatistic
+            ]
+        });
         this.connection.initialize()
         .then(() => {
             console.log('База данных успешно подключена!');
@@ -28,5 +34,9 @@ export class DB {
             console.error('Ошибка выполнения запроса:', error);
             return null;
         }
+    }
+
+    public get db(): DataSource {
+        return this.connection;
     }
 }

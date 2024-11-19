@@ -1,4 +1,4 @@
-import { DB } from "./DB";
+import { DB } from "./DB/DB";
 import { Errors } from "./Exceptions";
 import { Phrases, PhrasesList, PhrasesParams } from "./Phrases";
 

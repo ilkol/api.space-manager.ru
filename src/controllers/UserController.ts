@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import { DB } from '../DB';
+import { DB } from '../DB/DB';
 import { AbstractController } from './AbstractController';
 import Joi from 'joi';
+import { UserStatistic } from '../DB/Entities/UserStatistic';
+import { Between } from 'typeorm';
 
 export class UserController extends AbstractController
 {
@@ -9,10 +11,6 @@ export class UserController extends AbstractController
     {
         super();
     }
-
-    getUsers(req: Request, res: Response): void {
-        res.json({ message: 'CORS настроен!' });
-    };
     
     getUserById(req: Request, res: Response): void {
         const userId = req.params.id;
@@ -72,21 +70,22 @@ export class UserController extends AbstractController
 	async getTodayActivityStatistics(req: Request, res: Response)
 	{
 		const userId = req.params.id;
-		
-		const query = `
-			SELECT 
-				COUNT(*) AS messages
-			FROM usersStatistics
-			WHERE user_id = ?
-			AND DATE(FROM_UNIXTIME(time)) = CURDATE();
-		`;
-		const [results]: any = await this.db.query(query, [userId]);
 
-		if (results) {
-			res.json(results);
-		} else {
-			res.json({ messages: 0 });
-		}
+		const startOfDay = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000); // Начало дня в UNIX
+    	const endOfDay = Math.floor(new Date().setHours(23, 59, 59, 999) / 1000); // Конец дня в UNIX
+
+		const count = await this.db.db
+			.getRepository(UserStatistic)
+			.count({
+				where: {
+					user_id: +userId,
+					time: Between(startOfDay, endOfDay),
+				},
+			});
+		
+		res.json({
+			messages: count
+		});
 	}
 
 }

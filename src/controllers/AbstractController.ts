@@ -1,4 +1,4 @@
-import { DB } from "../DB";
+import { DB } from "../DB/DB";
 
 export abstract class AbstractController
 {
