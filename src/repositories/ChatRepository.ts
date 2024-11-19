@@ -119,8 +119,6 @@ export class ChatRepository extends Repository
 			throw new Errors.QueryError('Не найдены права или информация о пользователе для этого чата');
 		}
 	
-		console.log(result);
-		// const value = result[setting];
 		const minRole = result.role;
 	
 		return result.role >= minRole;
@@ -175,20 +173,6 @@ export class ChatRepository extends Repository
 				}
 			});
 
-		// let query: string = `
-		// 	SELECT 
-		// 		name,
-		// 		level,
-		// 		emoji
-		// 	FROM roles
-		// 	WHERE chat_id =
-		// `;
-		// query = this.buildChatQuery(query, type);
-		
-        // const results: any = await this.db.query(query, [chat]);
-		// if(!results) {
-		// 	throw new Errors.QueryError("Не удалось запросить роли в чате");
-		// }
 		const roles: Map<number, Role> = rolesArrayFromDB(results);
 		return roles;
 	}
