@@ -10,6 +10,27 @@ import { VKAPI } from "../VK/API";
 import { Service } from "./Services";
 import { CustomDate } from "../utils/CustomDate";
 
+export type SettingList = 'togglefeed' |
+				'kickmenu' |
+				'leavemenu' |
+				'hideusers' |
+				'nameType' |
+				'unPunishNotify' |
+				'unRoleAfterKick' |
+				'autounban' |
+				'roleLevelStats' |
+				'muteType' |
+				'si_messages' |
+				'si_smilies' |
+				'si_stickers' |
+				'si_reply' |
+				'si_photo' |
+				'si_video' |
+				'si_files' |
+				'si_audio' |
+				'si_reposts' |
+				'si_mats';
+
 const defaultRolesName: Map<number, string> = new Map([
 	[0, "Участник"],
 	[20, "Модератор"],
@@ -115,7 +136,7 @@ export class ChatService extends Service {
 		
 		return Array.from(roles.values()).sort((a, b) => b.level - a.level);
 	}
-	public async setSetting({chat, type, setting, value, user}: {chat: string, type: string, setting: string, value: boolean, user: number})
+	public async setSetting({chat, type, setting, value, user}: {chat: string, type: string, setting: SettingList, value: boolean, user: number})
 	{
 		const hasRight = await this.chatRepo.checkMemberRight(user, chat, type, CommandRights.settings);
         if (!hasRight) {

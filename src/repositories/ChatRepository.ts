@@ -5,6 +5,7 @@ import { VKAPI } from "../VK/API";
 import { Returns } from "../controllers/ChatController";
 
 import * as Entities from '../DB/Entities';
+import { SettingList } from "../services/ChatService";
 
 export interface ChatMember 
 {
@@ -176,17 +177,23 @@ export class ChatRepository extends Repository
 		const roles: Map<number, Role> = rolesArrayFromDB(results);
 		return roles;
 	}
-	public async setSetting(chat: string, type: string, setting: string, value: boolean) {
-		let query: string = `
-			UPDATE settings
-			SET 
-				${setting} = ?
-			WHERE chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-        const results = await this.db.query(query, [(value ? 1 : 0), chat]);
-		if(!results) {
+	public async setSetting(chat: string, type: string, setting: SettingList, value: boolean) {
+
+		const chat_id = await this.normalizeChatID(chat, type);
+
+		const repo = this.db.db.getRepository(Entities.Setting);
+
+		const result = await repo
+			.findOneBy({
+				chat_id
+		});
+
+		if(result) {
+			console.log(setting, value);
+			result[setting] = value;
+			await repo.save(result);
+		}
+		else {
 			throw new Errors.QueryError("Не удалось изменить настройки");
 		}
 	}
