@@ -46,6 +46,10 @@ export class VKAPI
 	{	
 		return this.query<RemoveUserParams>('messages.removeChatUser', args);
 	}
+	public static async muteUser(args: MuteUserParams)
+	{	
+		return this.query<MuteUserParams>('messages.changeConversationMemberRestrictions', args);
+	}
 	public static async getConversationMembers(args: GetConversationMembersParams)
 	{
 		return this.query<GetConversationMembersParams>('messages.getConversationMembers', args);
@@ -75,6 +79,14 @@ interface RemoveUserParams
 	 * Идентификатор участника, которого необходимо исключить из беседы. Для сообществ — идентификатор сообщества со знаком «минус».
 	 */
 	member_id?: number;
+}
+
+interface MuteUserParams
+{
+	peer_id: number;
+	member_ids: number[];
+	action: "ro";
+	for?: number;
 }
 
 interface GetConversationMembersParams

@@ -1,3 +1,4 @@
+import { date } from "joi";
 import { Args, Returns } from "../controllers/ChatController";
 import { Errors } from "../Exceptions";
 import { Logger, LogType } from "../Logger";
@@ -7,6 +8,7 @@ import { UserRepository } from "../repositories/UserRepository";
 import { CommandRights } from "../utils/CommandRights";
 import { VKAPI } from "../VK/API";
 import { Service } from "./Services";
+import { CustomDate } from "../utils/CustomDate";
 
 const defaultRolesName: Map<number, string> = new Map([
 	[0, "Участник"],
@@ -159,8 +161,8 @@ export class ChatService extends Service {
 	{
 		return await this.chatRepo.getInfo(chat, type);
 	}
-	public async muteMember({chat, user, punisher, reason, type, time}: {chat: string, user: number, punisher: number, reason: string, type: string, time: number}) {
-        const hasRight = await this.chatRepo.checkMemberRight(punisher, chat, type, CommandRights.kick);
+	public async muteMember({chat, user, punisher, reason, type, time}: {chat: string, user: number, punisher: number, reason?: string, type: string, time: number}) {
+        const hasRight = await this.chatRepo.checkMemberRight(punisher, chat, type, CommandRights.mute);
         if (!hasRight) {
             throw new Errors.NoPermissions();
         }
@@ -170,9 +172,9 @@ export class ChatService extends Service {
 
 
         const chatId: number = type === 'uid' ? await this.chatRepo.getChatIdFromUid(chat) : +chat;
-        await this.chatRepo.muteUser(chatId, user, time);
+        await this.chatRepo.muteUser(chatId, user, time, punisher, reason ?? "");
         
-        await this.logKick(chatId, punisher, user, reason);
+        await this.logMute(chatId, punisher, user, time, reason);
 		
 
         return true;
@@ -290,7 +292,7 @@ export class ChatService extends Service {
         const name = await this.userRepo.getMemberNameInfo(user);
 		const panisherInfo = await this.getUserInfo(punisher);
 		
-		Logger.log(LogType.kickUser, chat, { 
+		Logger.log(chat, LogType.kickUser, { 
 			user: Phrases.formatMentionName(user, name.acc),
 			punisher: panisherInfo.formattedName,
 			gender: panisherInfo.genderLabel,
@@ -302,9 +304,48 @@ export class ChatService extends Service {
 		
 		const logText = Phrases.f(Phrases.List.kickUser, { 
 			user: Phrases.formatMentionName(user, nick ?? name.acc),
-			punisher: punisherNick ? Phrases.formatMentionName(user, punisherNick) : panisherInfo.formattedName,
+			punisher: punisherNick ? Phrases.formatMentionName(punisher, punisherNick) : panisherInfo.formattedName,
 			gender: panisherInfo.genderLabel,
 			reason: reason
+		})
+
+		await VKAPI.sendMessage({
+            peer_id: chat,
+            message: logText,
+        });
+    }
+	private async logMute(chat: number, punisher: number, user: number, time: number, reason?: string) {
+        const name = await this.userRepo.getMemberNameInfo(user);
+		const panisherInfo = await this.getUserInfo(punisher);
+		
+		let timeStr;
+		if(time === -1) {
+			timeStr = "навсегда";
+		} else {
+			const unMuteTime = new Date();
+			unMuteTime.setSeconds(unMuteTime.getSeconds() + time);
+			const date = new CustomDate(unMuteTime);
+			timeStr = date.getFormatedGMTDate();
+			// timeStr = `до ${unMuteTime.getDate()}.${unMuteTime.getMonth()}.${unMuteTime.getFullYear()} ${unMuteTime.getHours()}:${unMuteTime.getMinutes()}`;
+		}
+		
+		Logger.log(chat, LogType.muteUser, { 
+			user: Phrases.formatMentionName(user, name.dat),
+			punisher: panisherInfo.formattedName,
+			gender: panisherInfo.genderLabel,
+			date: timeStr,
+			reason: reason
+		});
+
+		const nick = await this.chatRepo.getUserNick(chat, user);
+		const punisherNick = await this.chatRepo.getUserNick(chat, punisher);
+		
+		const logText = Phrases.f(Phrases.List.muteUser, { 
+			user: Phrases.formatMentionName(user, nick ?? name.dat),
+			punisher: punisherNick ? Phrases.formatMentionName(punisher, punisherNick) : panisherInfo.formattedName,
+			gender: panisherInfo.genderLabel,
+			reason: reason,
+			date: timeStr
 		})
 
 		await VKAPI.sendMessage({

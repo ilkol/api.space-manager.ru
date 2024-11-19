@@ -6,13 +6,15 @@ export enum LogType {
     userLeave = PhrasesList.userLeave,
     kickUser = PhrasesList.kickUser,
     banUser = PhrasesList.banUser,
-	changeSetting = PhrasesList.changeSetting
+	changeSetting = PhrasesList.changeSetting,
+	muteUser = PhrasesList.muteUser
 }
 type LogTypeToParams = {
     [LogType.userLeave]: PhrasesParams[PhrasesList.userLeave];
     [LogType.kickUser]: PhrasesParams[PhrasesList.kickUser];
     [LogType.banUser]: PhrasesParams[PhrasesList.banUser];
 	[LogType.changeSetting]: PhrasesParams[PhrasesList.changeSetting];
+	[LogType.muteUser]: PhrasesParams[PhrasesList.muteUser];
 };
 
 export class Logger
@@ -43,7 +45,7 @@ export class Logger
 	private async makeLog(chat: number, text: string)
 	{
 		let query = `
-			INSERT INTO logs_actions 
+			INSERT INTO logsActions 
 				(chat_id, text, dateunix)
 			VALUES
 				(?, ?, ?)

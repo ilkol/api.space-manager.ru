@@ -308,6 +308,24 @@ export class ChatRepository extends Repository
 		return results;
 	}
 
+	private async muteUserFromChatAPI(chat: number, user: number, period: number) {
+		const obj:{ peer_id: number; member_ids: number[]; action: "ro"; for?: number; } = period === 0 ? {
+			peer_id: chat,
+			member_ids: [user],
+			action: "ro"
+		} : {
+			peer_id: chat,
+			member_ids: [user],
+			action: "ro",
+			for: period
+		};
+		const response = await VKAPI.muteUser(obj);
+		if (response.error) {
+			return { success: false, error: response.error };
+		}
+		return { success: true };
+	}
+
 	private async kickUserFromChatAPI(chat: number, user: number) {
 		const response = await VKAPI.kickUser({
 			chat_id: chat - 2000000000,
@@ -350,6 +368,21 @@ export class ChatRepository extends Repository
 		`;
 	
 		const result: any = await this.db.query(query, [chat, chat, user, chat]);
+	
+		if (result.affectedRows === 0) {
+			throw new Errors.QueryError("Не удалось обновить информацию о пользователе чата");
+		}
+	}
+	private async muteUserUpdateInfo(chat: number, user: number, time: number, punisher: number, reason: string): Promise<void> {
+		let query = `
+			UPDATE users
+			SET
+				mute = ?,
+				muteinfo = ?
+			WHERE user_id = ? AND chat_id = ? LIMIT 1
+		`;
+	
+		const result: any = await this.db.query(query, [time ? time : -1, `${punisher}|${reason}`, user, chat]);
 	
 		if (result.affectedRows === 0) {
 			throw new Errors.QueryError("Не удалось обновить информацию о пользователе чата");
@@ -408,11 +441,12 @@ export class ChatRepository extends Repository
 		
 		const queryParams = [user, chat];
 
-        const [results]: any = await this.db.query(query, queryParams);
+        const results: any = await this.db.query(query, queryParams);
 		if(!results) {
 			throw new Errors.QueryError("Статистика участника чата не найдена");
 		}
-		return results;
+		const [result] = results;
+		return result;
 	}
 
 	public async getChatCommandAccess(chat: string, type: string)
@@ -476,21 +510,25 @@ export class ChatRepository extends Repository
 		const [userInfo] = userInfoRes;
 		return userInfo.nick;
 	}
-	public async muteUser(chat: number, user: number, time: number): Promise<void> {
-		const result = await this.kickUserFromChatAPI(chat, user);
+	public async muteUser(chat: number, user: number, time: number, punisher: number, reason: string): Promise<void> {
+		const muteType = await this.getMuteType(chat);
 	
-		if (!result.success) {
-			const errorMessage = result.error?.error_msg || 'Неизвестная ошибка при попытке исключить пользователя';
-			throw new Errors.VKAccessDenied(errorMessage);
+		if(muteType === MuteType.vkMute) {
+			const result = await this.muteUserFromChatAPI(chat, user, time);
+	
+			if (!result.success) {
+				const errorMessage = result.error?.error_msg || 'Неизвестная ошибка при попытке закрыть чат пользователю';
+				throw new Errors.VKAccessDenied(errorMessage);
+			}
 		}
 	
-		await this.kickedUserUpdateInfo(chat, user);
+		await this.muteUserUpdateInfo(chat, user, time, punisher, reason);
 	}
-	private async getMuteType(chat: number)//: Promise<MuteType>
+	private async getMuteType(chat: number): Promise<MuteType>
 	{
 		let query: string = `
 			SELECT 
-				muteType,				
+				muteType			
 			FROM settings s
 			WHERE s.chat_id = ?
 			LIMIT 1
@@ -501,8 +539,9 @@ export class ChatRepository extends Repository
 			throw new Errors.QueryError("Настройки чата не найдены");
 		}
 		if(results.muteType === 1) {
-			// return 
+			return MuteType.vkMute;
 		}
+		return MuteType.deleteMessage;
 	}
 }
 

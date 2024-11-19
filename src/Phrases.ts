@@ -4,7 +4,8 @@ export enum PhrasesList {
 	userLeave,
 	kickUser,
 	banUser,
-	changeSetting
+	changeSetting,
+	muteUser,
 }
 
 export interface PhrasesParams {
@@ -12,6 +13,7 @@ export interface PhrasesParams {
     [PhrasesList.kickUser]: { user: string; gender: WordGender; punisher: string; reason?: string};
 	[PhrasesList.banUser]: { user: string; gender: WordGender; punisher: string; reason?: string};
 	[PhrasesList.changeSetting]: { user: string; state: "в"|"вы"; gender: WordGender; setting: string};
+	[PhrasesList.muteUser]: { user: string; gender: WordGender; punisher: string; date: string; reason?: string};
 }
 
 const pharses = {
@@ -19,6 +21,7 @@ const pharses = {
 	[PhrasesList.kickUser]: "{punisher} исключил{gender} {user} из чата",
 	[PhrasesList.banUser]: "{punisher} заблокировал{gender} {time} {user}",
 	[PhrasesList.changeSetting]: "{user} {state}ключил{gender} {setting}",
+	[PhrasesList.muteUser]: "{punisher} запретил{gender} писать в чат {user} {date}"
 };
 
 
