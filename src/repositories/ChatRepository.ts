@@ -189,7 +189,6 @@ export class ChatRepository extends Repository
 		});
 
 		if(result) {
-			console.log(setting, value);
 			result[setting] = value;
 			await repo.save(result);
 		}
@@ -209,18 +208,13 @@ export class ChatRepository extends Repository
 		return results;
 	}
 	public async getBannedUsers(chat: string, type: string) {
-		let query: string = `
-			SELECT 
-				b.*
-			FROM banlist b
-			WHERE b.chat_id =
-		`;
-		query = this.buildChatQuery(query, type);
-		
-        const results: any = await this.db.query(query, [chat]);
-		if(!results) {
-			throw new Errors.QueryError("Заблокированные пользователи не найдены");
-		}
+		const chat_id = await this.normalizeChatID(chat, type);
+
+		const results = await this.db.db.getRepository(Entities.Ban)
+			.findBy({
+				chat_id
+		});
+
 		const usersArray: BanInfo[] = results.map(bannedUser);
 		return usersArray;		
 	}
